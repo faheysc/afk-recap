@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.time.Instant;
 import java.util.EnumMap;
@@ -14,29 +14,37 @@ import net.runelite.api.Skill;
 
 // All calls run on the client thread. No rendering or persistent storage belongs here.
 @Slf4j
-final class AwaySessionManager
+final class AfkSessionManager
 {
 	private final LongSupplier nanoTime;
 	private final Supplier<Instant> timestamp;
-	private final Consumer<AwayRecapSession> recapConsumer;
+	private final Consumer<AfkRecapSession> recapConsumer;
+	private final Supplier<Map<Integer, Integer>> inventorySnapshot;
 	private final Map<Skill, Integer> experience = new EnumMap<>(Skill.class);
 	private long gameTicks;
 	private int inactiveTicks;
 	private Session session;
 
-	AwaySessionManager()
+	AfkSessionManager()
 	{
 		this(System::nanoTime);
 	}
 
-	AwaySessionManager(LongSupplier nanoTime)
+	AfkSessionManager(LongSupplier nanoTime)
 	{
 		this(nanoTime, Instant::now, recap -> {});
 	}
 
-	AwaySessionManager(LongSupplier nanoTime, Supplier<Instant> timestamp,
-		Consumer<AwayRecapSession> recapConsumer)
+	AfkSessionManager(LongSupplier nanoTime, Supplier<Instant> timestamp,
+		Consumer<AfkRecapSession> recapConsumer)
 	{
+		this(nanoTime, timestamp, recapConsumer, () -> null);
+	}
+
+	AfkSessionManager(LongSupplier nanoTime, Supplier<Instant> timestamp,
+		Consumer<AfkRecapSession> recapConsumer, Supplier<Map<Integer, Integer>> inventorySnapshot)
+	{
+		this.inventorySnapshot = inventorySnapshot;
 		this.nanoTime = nanoTime;
 		this.timestamp = timestamp;
 		this.recapConsumer = recapConsumer;
@@ -48,7 +56,7 @@ final class AwaySessionManager
 		experience.putAll(xp);
 	}
 
-	void gameTick(AwayRecapConfig config)
+	void gameTick(AfkRecapConfig config)
 	{
 		gameTicks++;
 		inactiveTicks = Math.min(100, inactiveTicks + 1);
@@ -61,15 +69,15 @@ final class AwaySessionManager
 		if (session == null && config.startOnIdle() && inactiveTicks >= threshold)
 		{
 			log.debug("Idle threshold reached: {} inactive game ticks (~{} ms)", inactiveTicks, inactiveTicks * 600L);
-			start(AwaySessionTrigger.IDLE, IdleSkill.enabledSkills(config));
+			start(AfkSessionTrigger.IDLE, IdleSkill.enabledSkills(config));
 		}
 	}
 
-	void focusChanged(boolean focused, AwayRecapConfig config)
+	void focusChanged(boolean focused, AfkRecapConfig config)
 	{
 		if (focused)
 		{
-			if (trigger() == AwaySessionTrigger.FOCUS)
+			if (trigger() == AfkSessionTrigger.FOCUS)
 			{
 				end("focus regained");
 				inactiveTicks = 0;
@@ -77,13 +85,13 @@ final class AwaySessionManager
 		}
 		else if (config.startOnFocusLoss() && session == null)
 		{
-			start(AwaySessionTrigger.FOCUS, EnumSet.noneOf(Skill.class));
+			start(AfkSessionTrigger.FOCUS, EnumSet.noneOf(Skill.class));
 		}
 	}
 
 	void manualInput()
 	{
-		if (trigger() == AwaySessionTrigger.IDLE)
+		if (trigger() == AfkSessionTrigger.IDLE)
 		{
 			end("manual input");
 		}
@@ -103,10 +111,18 @@ final class AwaySessionManager
 		}
 		long gained = (long) xp - previous;
 		session.xpGained.merge(skill, gained, Long::sum);
-		if (trigger() == AwaySessionTrigger.IDLE && session.enabledSkills.contains(skill)
+		if (trigger() == AfkSessionTrigger.IDLE && session.enabledSkills.contains(skill)
 			&& session.relevantSkills.add(skill))
 		{
 			log.debug("IDLE session enabled skill activity detected: {} (+{} XP)", skill, gained);
+		}
+	}
+
+	void inventoryChanged(Map<Integer, Integer> inventory)
+	{
+		if (session != null)
+		{
+			session.inventory.update(inventory);
 		}
 	}
 
@@ -120,7 +136,7 @@ final class AwaySessionManager
 		experience.clear();
 	}
 
-	AwaySessionTrigger trigger()
+	AfkSessionTrigger trigger()
 	{
 		return session == null ? null : session.trigger;
 	}
@@ -130,9 +146,9 @@ final class AwaySessionManager
 		return session == null ? EnumSet.noneOf(Skill.class) : EnumSet.copyOf(session.relevantSkills);
 	}
 
-	private void start(AwaySessionTrigger trigger, Set<Skill> enabledSkills)
+	private void start(AfkSessionTrigger trigger, Set<Skill> enabledSkills)
 	{
-		session = new Session(trigger, gameTicks, nanoTime.getAsLong(), timestamp.get(), enabledSkills);
+		session = new Session(trigger, gameTicks, nanoTime.getAsLong(), timestamp.get(), enabledSkills, inventorySnapshot.get());
 		log.debug("Away session started: trigger={}, gameTick={}, enabledSkills={}", trigger, gameTicks, enabledSkills);
 	}
 
@@ -140,7 +156,7 @@ final class AwaySessionManager
 	{
 		Session ended = session;
 		session = null;
-		if (ended.trigger == AwaySessionTrigger.IDLE)
+		if (ended.trigger == AfkSessionTrigger.IDLE)
 		{
 			// Re-arm every idle-session ending centrally, before diagnostics run.
 			inactiveTicks = 0;
@@ -148,55 +164,68 @@ final class AwaySessionManager
 		Instant endTimestamp = timestamp.get();
 		long ticks = gameTicks - ended.startTick;
 		long elapsedMillis = (nanoTime.getAsLong() - ended.startNanos) / 1_000_000L;
-		String outcome = ended.trigger == AwaySessionTrigger.IDLE
+		String outcome = ended.trigger == AfkSessionTrigger.IDLE
 			? (ended.relevantSkills.isEmpty() ? "discarded" : "relevant") : "ended";
 		log.debug("Away session ended: trigger={}, reason={}, outcome={}, skills={}, elapsedGameTicks={}, elapsedMs={}",
 			ended.trigger, reason, outcome, ended.relevantSkills, ticks, elapsedMillis);
-		if (!ended.xpGained.isEmpty()
-			&& (ended.trigger == AwaySessionTrigger.FOCUS || !ended.relevantSkills.isEmpty()))
+		Map<Integer, Integer> itemGains = ended.inventory.gains();
+		if ((!ended.xpGained.isEmpty() || !itemGains.isEmpty())
+			&& (ended.trigger == AfkSessionTrigger.FOCUS || !ended.relevantSkills.isEmpty()))
 		{
-			AwayRecapSession recap = new AwayRecapSession(ended.trigger, ended.startTick,
+			AfkRecapSession recap = new AfkRecapSession(ended.trigger, ended.startTick,
 				ended.startTimestamp, gameTicks, endTimestamp, elapsedMillis,
-				ended.xpGained, ended.relevantSkills);
+				ended.xpGained, ended.relevantSkills, itemGains);
 			logRecap(recap);
 			// Hand off an immutable snapshot; no session history or permanent storage.
 			recapConsumer.accept(recap);
 		}
 	}
 
-	private void logRecap(AwayRecapSession recap)
+	private void logRecap(AfkRecapSession recap)
 	{
 		if (!log.isDebugEnabled())
 		{
 			return;
 		}
-		StringBuilder message = new StringBuilder("Away Recap\nTrigger: ")
+		StringBuilder message = new StringBuilder("AFK Recap\nTrigger: ")
 			.append(recap.getTrigger())
 			.append("\nDuration: ").append(recap.getElapsedGameTicks()).append(" ticks / ")
 			.append(String.format(Locale.ROOT, "%.1f", recap.getElapsedMillis() / 1000.0))
-			.append(" seconds\nXP gained:");
+			.append(" seconds");
+		if (!recap.getXpGained().isEmpty())
+		{
+			message.append("\nXP gained:");
+		}
 		recap.getXpGained().forEach((skill, gained) ->
 			message.append("\n- ").append(skill.getName()).append(": ").append(gained));
+		if (!recap.getItemGains().isEmpty())
+		{
+			message.append("\nItems gained:");
+			recap.getItemGains().forEach((id, quantity) ->
+				message.append("\n- Item ").append(id).append(": ").append(quantity));
+		}
 		log.debug("{}", message);
 	}
 
 	private static final class Session
 	{
-		private final AwaySessionTrigger trigger;
+		private final AfkSessionTrigger trigger;
 		private final long startTick;
 		private final long startNanos;
 		private final Instant startTimestamp;
 		private final Map<Skill, Long> xpGained = new EnumMap<>(Skill.class);
 		private final Set<Skill> enabledSkills;
+		private final InventoryGainTracker inventory;
 		private final EnumSet<Skill> relevantSkills = EnumSet.noneOf(Skill.class);
 
-		private Session(AwaySessionTrigger trigger, long startTick, long startNanos,
-			Instant startTimestamp, Set<Skill> enabledSkills)
+		private Session(AfkSessionTrigger trigger, long startTick, long startNanos,
+			Instant startTimestamp, Set<Skill> enabledSkills, Map<Integer, Integer> inventoryBaseline)
 		{
 			this.trigger = trigger;
 			this.startTick = startTick;
 			this.startNanos = startNanos;
 			this.startTimestamp = startTimestamp;
+			this.inventory = new InventoryGainTracker(inventoryBaseline);
 			this.enabledSkills = EnumSet.noneOf(Skill.class);
 			this.enabledSkills.addAll(enabledSkills);
 		}

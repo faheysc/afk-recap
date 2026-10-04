@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import com.google.inject.Provides;
 import java.awt.event.KeyEvent;
@@ -11,10 +11,13 @@ import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.GameState;
+import net.runelite.api.ItemContainer;
 import net.runelite.api.Skill;
 import net.runelite.api.events.FocusChanged;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.GameTick;
+import net.runelite.api.events.ItemContainerChanged;
+import net.runelite.api.gameval.InventoryID;
 import net.runelite.api.events.StatChanged;
 import net.runelite.client.callback.ClientThread;
 import net.runelite.client.config.ConfigManager;
@@ -32,10 +35,10 @@ import net.runelite.client.plugins.PluginDescriptor;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Away Recap",
+	name = "AFK Recap",
 	description = "Records relevant events while RuneLite is unfocused and summarizes them when the player returns."
 )
-public class AwayRecapPlugin extends Plugin
+public class AfkRecapPlugin extends Plugin
 {
 	@Inject
 	private Client client;
@@ -44,7 +47,7 @@ public class AwayRecapPlugin extends Plugin
 	private ClientThread clientThread;
 
 	@Inject
-	private AwayRecapConfig config;
+	private AfkRecapConfig config;
 
 	@Inject
 	private MouseManager mouseManager;
@@ -56,26 +59,29 @@ public class AwayRecapPlugin extends Plugin
 	private OverlayManager overlayManager;
 
 	@Inject
-	private AwayRecapOverlay overlay;
+	private AfkRecapOverlay overlay;
 
 	@Inject
-	private AwayRecapController recapController;
+	private AfkRecapController recapController;
 
 	@Inject
-	private AwayRecapHistory recapHistory;
+	private AfkRecapHistory recapHistory;
 
 	@Inject
 	private ClientToolbar clientToolbar;
 
+	@Inject
+	private AfkRecapItemPresentation itemPresentation;
+
 	// Panel and navigation state are accessed only on the Swing EDT.
-	private AwayRecapPanel sidePanel;
+	private AfkRecapPanel sidePanel;
 	private NavigationButton navigationButton;
 	private boolean navigationAdded;
 
 	private volatile Object recapLifecycle;
 
 	// Input callbacks are on the AWT thread; state mutations are queued on the client thread.
-	private volatile AwaySessionManager sessions;
+	private volatile AfkSessionManager sessions;
 
 	private final MouseAdapter mouseListener = new MouseAdapter()
 	{
@@ -107,9 +113,9 @@ public class AwayRecapPlugin extends Plugin
 	};
 
 	@Provides
-	AwayRecapConfig provideConfig(ConfigManager configManager)
+	AfkRecapConfig provideConfig(ConfigManager configManager)
 	{
-		return configManager.getConfig(AwayRecapConfig.class);
+		return configManager.getConfig(AfkRecapConfig.class);
 	}
 
 	@Override
@@ -119,15 +125,16 @@ public class AwayRecapPlugin extends Plugin
 		recapLifecycle = lifecycle;
 		recapController.clear();
 		recapHistory.setLimit(config.recentRecapLimit());
-		AwaySessionManager started = new AwaySessionManager(System::nanoTime, Instant::now, recap ->
+		AfkSessionManager started = new AfkSessionManager(System::nanoTime, Instant::now, recap ->
 		{
 			if (recapLifecycle == lifecycle)
 			{
-				recapController.show(recap, config.showOverlay(), config.overlayDurationSeconds());
+				AfkRecapItemPresentation.Display items = itemPresentation.prepare(recap);
+				recapController.show(recap, config.showOverlay(), config.overlayDurationSeconds(), items);
 				recapHistory.add(recap);
 				refreshSidePanel();
 			}
-		});
+		}, this::inventorySnapshot);
 		sessions = started;
 		clientThread.invoke(() ->
 		{
@@ -149,7 +156,7 @@ public class AwayRecapPlugin extends Plugin
 		updateSidePanel();
 		overlayManager.remove(overlay);
 		recapController.clear();
-		AwaySessionManager stopped = sessions;
+		AfkSessionManager stopped = sessions;
 		sessions = null;
 		mouseManager.unregisterMouseListener(mouseListener);
 		keyManager.unregisterKeyListener(keyListener);
@@ -161,7 +168,7 @@ public class AwayRecapPlugin extends Plugin
 
 	private void manualInput()
 	{
-		AwaySessionManager current = sessions;
+		AfkSessionManager current = sessions;
 		if (current != null)
 		{
 			clientThread.invoke(() ->
@@ -179,7 +186,7 @@ public class AwayRecapPlugin extends Plugin
 	public void onFocusChanged(FocusChanged event)
 	{
 		log.debug("RuneLite {} focus", event.isFocused() ? "gained" : "lost");
-		AwaySessionManager current = sessions;
+		AfkSessionManager current = sessions;
 		if (current != null)
 		{
 			current.focusChanged(event.isFocused(), config);
@@ -189,7 +196,7 @@ public class AwayRecapPlugin extends Plugin
 	@Subscribe
 	public void onGameTick(GameTick event)
 	{
-		AwaySessionManager current = sessions;
+		AfkSessionManager current = sessions;
 		if (current != null && client.getGameState() == GameState.LOGGED_IN)
 		{
 			current.gameTick(config);
@@ -199,7 +206,7 @@ public class AwayRecapPlugin extends Plugin
 	@Subscribe
 	public void onStatChanged(StatChanged event)
 	{
-		AwaySessionManager current = sessions;
+		AfkSessionManager current = sessions;
 		if (current != null && client.getGameState() == GameState.LOGGED_IN)
 		{
 			current.statChanged(event.getSkill(), event.getXp());
@@ -207,9 +214,31 @@ public class AwayRecapPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onItemContainerChanged(ItemContainerChanged event)
+	{
+		AfkSessionManager current = sessions;
+		if (current != null && client.getGameState() == GameState.LOGGED_IN
+			&& event.getContainerId() == InventoryID.INV)
+		{
+			ItemContainer inventory = event.getItemContainer();
+			current.inventoryChanged(inventory == null ? null : InventoryGainTracker.totals(inventory.getItems()));
+		}
+	}
+
+	private Map<Integer, Integer> inventorySnapshot()
+	{
+		if (client.getGameState() != GameState.LOGGED_IN)
+		{
+			return null;
+		}
+		ItemContainer inventory = client.getItemContainer(InventoryID.INV);
+		return inventory == null ? null : InventoryGainTracker.totals(inventory.getItems());
+	}
+
+	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
-		AwaySessionManager current = sessions;
+		AfkSessionManager current = sessions;
 		if (current != null && event.getGameState() == GameState.LOGGED_IN)
 		{
 			baselineExperience(current);
@@ -264,10 +293,10 @@ public class AwayRecapPlugin extends Plugin
 			}
 			if (sidePanel == null)
 			{
-				sidePanel = new AwayRecapPanel(recapHistory);
+				sidePanel = new AfkRecapPanel(recapHistory, itemPresentation);
 				navigationButton = NavigationButton.builder()
-					.tooltip("Away Recap")
-					.icon(AwayRecapPanel.navigationIcon())
+					.tooltip("AFK Recap")
+					.icon(AfkRecapPanel.navigationIcon())
 					.priority(6)
 					.panel(sidePanel)
 					.build();
@@ -281,7 +310,7 @@ public class AwayRecapPlugin extends Plugin
 		});
 	}
 
-	private void baselineExperience(AwaySessionManager current)
+	private void baselineExperience(AfkSessionManager current)
 	{
 		Map<Skill, Integer> xp = new EnumMap<>(Skill.class);
 		for (Skill skill : Skill.values())

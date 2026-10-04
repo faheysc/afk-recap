@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -17,15 +17,15 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import static org.junit.Assert.*;
 
-public class AwayRecapCollectionTest
+public class AfkRecapCollectionTest
 {
-	private final AwayRecapConfig config = new AwayRecapConfig() {};
+	private final AfkRecapConfig config = new AfkRecapConfig() {};
 	private final AtomicLong now = new AtomicLong();
 	private final Instant epoch = Instant.parse("2026-10-04T00:00:00Z");
-	private final List<AwayRecapSession> recaps = new ArrayList<>();
-	private final AwaySessionManager manager = new AwaySessionManager(now::get,
+	private final List<AfkRecapSession> recaps = new ArrayList<>();
+	private final AfkSessionManager manager = new AfkSessionManager(now::get,
 		() -> epoch.plusNanos(now.get()), recaps::add);
-	private final Logger logger = (Logger) LoggerFactory.getLogger(AwaySessionManager.class);
+	private final Logger logger = (Logger) LoggerFactory.getLogger(AfkSessionManager.class);
 	private final ListAppender<ILoggingEvent> logs = new ListAppender<>();
 
 	@Before
@@ -70,10 +70,10 @@ public class AwayRecapCollectionTest
 	{
 		manager.manualInput();
 		ticks(10);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 	}
 
-	private AwayRecapSession onlyRecap()
+	private AfkRecapSession onlyRecap()
 	{
 		assertEquals(1, recaps.size());
 		return recaps.get(0);
@@ -82,7 +82,7 @@ public class AwayRecapCollectionTest
 	private long recapLogCount()
 	{
 		return logs.list.stream().map(ILoggingEvent::getFormattedMessage)
-			.filter(message -> message.startsWith("Away Recap\n")).count();
+			.filter(message -> message.startsWith("AFK Recap\n")).count();
 	}
 
 	@Test
@@ -91,7 +91,7 @@ public class AwayRecapCollectionTest
 		startFocus();
 		manager.statChanged(Skill.ATTACK, 1025);
 		endFocus();
-		assertEquals(AwaySessionTrigger.FOCUS, onlyRecap().getTrigger());
+		assertEquals(AfkSessionTrigger.FOCUS, onlyRecap().getTrigger());
 		assertEquals(Collections.singletonMap(Skill.ATTACK, 25L), onlyRecap().getXpGained());
 		assertEquals(1, recapLogCount());
 	}
@@ -194,7 +194,7 @@ public class AwayRecapCollectionTest
 	@Test
 	public void disabledIdleSkillDoesNotMakeCandidateRelevant()
 	{
-		AwayRecapConfig noWoodcutting = new AwayRecapConfig()
+		AfkRecapConfig noWoodcutting = new AfkRecapConfig()
 		{
 			@Override public boolean idleWoodcutting() { return false; }
 		};
@@ -217,8 +217,8 @@ public class AwayRecapCollectionTest
 		ticks(38);
 		now.set(23_300_000_000L);
 		manager.manualInput();
-		AwayRecapSession recap = onlyRecap();
-		assertEquals(AwaySessionTrigger.IDLE, recap.getTrigger());
+		AfkRecapSession recap = onlyRecap();
+		assertEquals(AfkSessionTrigger.IDLE, recap.getTrigger());
 		assertEquals(10, recap.getStartGameTick());
 		assertEquals(48, recap.getEndGameTick());
 		assertEquals(38, recap.getElapsedGameTicks());
@@ -229,7 +229,7 @@ public class AwayRecapCollectionTest
 		assertEquals(Long.valueOf(525), recap.getXpGained().get(Skill.WOODCUTTING));
 		assertEquals(Long.valueOf(12), recap.getXpGained().get(Skill.HITPOINTS));
 		String message = logs.list.stream().map(ILoggingEvent::getFormattedMessage)
-			.filter(value -> value.startsWith("Away Recap\n")).findFirst().get();
+			.filter(value -> value.startsWith("AFK Recap\n")).findFirst().get();
 		assertTrue(message.contains("Trigger: IDLE\nDuration: 38 ticks / 23.3 seconds"));
 		assertTrue(message.contains("- Woodcutting: 525"));
 		assertTrue(message.contains("- Hitpoints: 12"));
@@ -257,7 +257,7 @@ public class AwayRecapCollectionTest
 		ticks(9);
 		assertNull(manager.trigger());
 		ticks(1);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		manager.statChanged(Skill.WOODCUTTING, 1075);
 		manager.manualInput();
 		assertEquals(2, recaps.size());

@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -11,13 +11,13 @@ import net.runelite.client.ui.overlay.components.LineComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
 @Singleton
-public final class AwayRecapOverlay extends OverlayPanel
+public final class AfkRecapOverlay extends OverlayPanel
 {
-	private final AwayRecapConfig config;
-	private final AwayRecapController controller;
+	private final AfkRecapConfig config;
+	private final AfkRecapController controller;
 
 	@Inject
-	AwayRecapOverlay(AwayRecapPlugin plugin, AwayRecapConfig config, AwayRecapController controller)
+	AfkRecapOverlay(AfkRecapPlugin plugin, AfkRecapConfig config, AfkRecapController controller)
 	{
 		super(plugin);
 		this.config = config;
@@ -30,23 +30,40 @@ public final class AwayRecapOverlay extends OverlayPanel
 	public Dimension render(Graphics2D graphics)
 	{
 		panelComponent.getChildren().clear();
-		AwayRecapController.Presentation recap = controller.visiblePresentation(config.showOverlay());
+		AfkRecapController.Presentation recap = controller.visiblePresentation(config.showOverlay());
 		if (recap == null)
 		{
 			return null;
 		}
 		panelComponent.getChildren().add(TitleComponent.builder()
-			.text("Away Recap").color(Color.YELLOW).build());
+			.text("AFK Recap").color(Color.YELLOW).build());
 		panelComponent.getChildren().add(LineComponent.builder()
 			.left("Away:").right(recap.getDuration()).build());
 		panelComponent.getChildren().add(LineComponent.builder()
 			.left("Trigger:").right(recap.getTrigger()).build());
-		panelComponent.getChildren().add(TitleComponent.builder()
-			.text("XP gained").build());
-		for (AwayRecapController.XpRow row : recap.getXpRows())
+		if (!recap.getXpRows().isEmpty())
+		{
+			panelComponent.getChildren().add(TitleComponent.builder()
+				.text("XP gained").build());
+		}
+		for (AfkRecapController.XpRow row : recap.getXpRows())
 		{
 			panelComponent.getChildren().add(LineComponent.builder()
 				.left(row.getSkill()).right(row.getGained()).build());
+		}
+		if (!recap.getItemRows().isEmpty())
+		{
+			panelComponent.getChildren().add(TitleComponent.builder().text("Items gained").build());
+			for (AfkRecapItemPresentation.ItemRow row : recap.getItemRows())
+			{
+				panelComponent.getChildren().add(LineComponent.builder()
+					.left(row.getName()).right(row.getQuantityAndValue()).build());
+			}
+			if (recap.getTotalValue() != null)
+			{
+				panelComponent.getChildren().add(LineComponent.builder()
+					.left("Total value:").right(recap.getTotalValue()).build());
+			}
 		}
 		return super.render(graphics);
 	}

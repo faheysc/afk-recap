@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -8,21 +8,21 @@ import javax.inject.Singleton;
 
 /** Bounded, in-memory completed recap history, independent of panel visibility and Swing. */
 @Singleton
-public final class AwayRecapHistory
+public final class AfkRecapHistory
 {
-	private final List<AwayRecapSession> recaps = new ArrayList<>();
+	private final List<AfkRecapSession> recaps = new ArrayList<>();
 	private int limit = 20;
 
-	synchronized boolean add(AwayRecapSession recap)
+	synchronized boolean add(AfkRecapSession recap)
 	{
-		if (recap.getXpGained().isEmpty()
-			|| (recap.getTrigger() == AwaySessionTrigger.IDLE && recap.getRelevantIdleSkills().isEmpty()))
+		if (!recap.hasGains()
+			|| (recap.getTrigger() == AfkSessionTrigger.IDLE && recap.getRelevantIdleSkills().isEmpty()))
 		{
 			return false;
 		}
 		recaps.add(0, recap);
 		// Stable sort keeps the newest arrival first when completion timestamps tie.
-		recaps.sort(Comparator.comparing(AwayRecapSession::getEndTimestamp).reversed());
+		recaps.sort(Comparator.comparing(AfkRecapSession::getEndTimestamp).reversed());
 		trim();
 		return true;
 	}
@@ -33,7 +33,7 @@ public final class AwayRecapHistory
 		trim();
 	}
 
-	synchronized List<AwayRecapSession> snapshot()
+	synchronized List<AfkRecapSession> snapshot()
 	{
 		return Collections.unmodifiableList(new ArrayList<>(recaps));
 	}

@@ -52,5 +52,5 @@
 		<appender-ref ref="STDOUT"/>
 		<appender-ref ref="FILE"/>
 	</root>
-	<logger name="com.awayrecap" level="DEBUG" />
+	<logger name="com.afkrecap" level="DEBUG" />
 </configuration>

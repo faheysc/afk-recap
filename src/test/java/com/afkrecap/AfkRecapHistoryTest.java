@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.time.Instant;
 import java.time.ZoneId;
@@ -11,13 +11,13 @@ import net.runelite.api.Skill;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-public class AwayRecapHistoryTest
+public class AfkRecapHistoryTest
 {
-	private final AwayRecapHistory history = new AwayRecapHistory();
+	private final AfkRecapHistory history = new AfkRecapHistory();
 
-	private AwayRecapSession focus(long timestamp)
+	private AfkRecapSession focus(long timestamp)
 	{
-		return new AwayRecapSession(AwaySessionTrigger.FOCUS, 0, Instant.EPOCH, 33,
+		return new AfkRecapSession(AfkSessionTrigger.FOCUS, 0, Instant.EPOCH, 33,
 			Instant.ofEpochSecond(timestamp), 19900,
 			Collections.singletonMap(Skill.WOODCUTTING, 337L), Collections.emptySet());
 	}
@@ -25,7 +25,7 @@ public class AwayRecapHistoryTest
 	@Test
 	public void addsCompletedRecaps()
 	{
-		AwayRecapSession recap = focus(1);
+		AfkRecapSession recap = focus(1);
 		assertTrue(history.add(recap));
 		assertEquals(Collections.singletonList(recap), history.snapshot());
 	}
@@ -33,13 +33,13 @@ public class AwayRecapHistoryTest
 	@Test
 	public void sortsReverseChronologicallyEvenWhenArrivalsAreOutOfOrder()
 	{
-		AwayRecapSession oldest = focus(1);
-		AwayRecapSession newest = focus(3);
-		AwayRecapSession middle = focus(2);
+		AfkRecapSession oldest = focus(1);
+		AfkRecapSession newest = focus(3);
+		AfkRecapSession middle = focus(2);
 		history.add(oldest);
 		history.add(newest);
 		history.add(middle);
-		List<AwayRecapSession> recaps = history.snapshot();
+		List<AfkRecapSession> recaps = history.snapshot();
 		assertSame(newest, recaps.get(0));
 		assertSame(middle, recaps.get(1));
 		assertSame(oldest, recaps.get(2));
@@ -48,8 +48,8 @@ public class AwayRecapHistoryTest
 	@Test
 	public void timestampTiesKeepNewestArrivalFirst()
 	{
-		AwayRecapSession first = focus(1);
-		AwayRecapSession second = focus(1);
+		AfkRecapSession first = focus(1);
+		AfkRecapSession second = focus(1);
 		history.add(first);
 		history.add(second);
 		assertSame(second, history.snapshot().get(0));
@@ -60,8 +60,8 @@ public class AwayRecapHistoryTest
 	{
 		history.setLimit(2);
 		history.add(focus(1));
-		AwayRecapSession middle = focus(2);
-		AwayRecapSession newest = focus(3);
+		AfkRecapSession middle = focus(2);
+		AfkRecapSession newest = focus(3);
 		history.add(middle);
 		history.add(newest);
 		assertEquals(2, history.snapshot().size());
@@ -75,7 +75,7 @@ public class AwayRecapHistoryTest
 	@Test
 	public void defaultLimitIsTwenty()
 	{
-		assertEquals(20, new AwayRecapConfig() {}.recentRecapLimit());
+		assertEquals(20, new AfkRecapConfig() {}.recentRecapLimit());
 		for (int i = 0; i < 25; i++)
 		{
 			history.add(focus(i));
@@ -118,7 +118,7 @@ public class AwayRecapHistoryTest
 		history.add(focus(1));
 		history.clear();
 		assertTrue(history.snapshot().isEmpty());
-		AwayRecapSession next = focus(2);
+		AfkRecapSession next = focus(2);
 		history.add(next);
 		assertEquals(Collections.singletonList(next), history.snapshot());
 	}
@@ -127,12 +127,12 @@ public class AwayRecapHistoryTest
 	public void disabledSidePanelRetainsHistoryAndOverlayStillReceivesRecaps()
 	{
 		AtomicLong now = new AtomicLong();
-		AwayRecapController overlay = new AwayRecapController(now::get);
-		AwayRecapConfig config = new AwayRecapConfig()
+		AfkRecapController overlay = new AfkRecapController(now::get);
+		AfkRecapConfig config = new AfkRecapConfig()
 		{
 			@Override public boolean enableSidePanel() { return sidePanelEnabled; }
 		};
-		AwaySessionManager manager = new AwaySessionManager(now::get, () -> Instant.EPOCH, recap ->
+		AfkSessionManager manager = new AfkSessionManager(now::get, () -> Instant.EPOCH, recap ->
 		{
 			overlay.show(recap, config.showOverlay(), config.overlayDurationSeconds());
 			history.add(recap);
@@ -156,8 +156,8 @@ public class AwayRecapHistoryTest
 	@Test
 	public void sessionPipelineOnlyAddsRelevantCompletedRecaps()
 	{
-		AwayRecapConfig config = new AwayRecapConfig() {};
-		AwaySessionManager manager = new AwaySessionManager(() -> 0L, () -> Instant.EPOCH, history::add);
+		AfkRecapConfig config = new AfkRecapConfig() {};
+		AfkSessionManager manager = new AfkSessionManager(() -> 0L, () -> Instant.EPOCH, history::add);
 		Map<Skill, Integer> baseline = new EnumMap<>(Skill.class);
 		baseline.put(Skill.WOODCUTTING, 1000);
 		baseline.put(Skill.HITPOINTS, 1000);
@@ -180,20 +180,20 @@ public class AwayRecapHistoryTest
 		assertTrue(history.snapshot().isEmpty());
 		manager.manualInput();
 		assertEquals(1, history.snapshot().size());
-		assertEquals(AwaySessionTrigger.IDLE, history.snapshot().get(0).getTrigger());
+		assertEquals(AfkSessionTrigger.IDLE, history.snapshot().get(0).getTrigger());
 		manager.focusChanged(false, config);
 		manager.statChanged(Skill.HITPOINTS, 1020);
 		manager.focusChanged(true, config);
 		assertEquals(2, history.snapshot().size());
-		assertEquals(AwaySessionTrigger.FOCUS, history.snapshot().get(0).getTrigger());
+		assertEquals(AfkSessionTrigger.FOCUS, history.snapshot().get(0).getTrigger());
 	}
 
 	@Test
 	public void historyDefensivelyRejectsEmptyAndDiscardedRecaps()
 	{
-		AwayRecapSession empty = new AwayRecapSession(AwaySessionTrigger.FOCUS, 0, Instant.EPOCH,
+		AfkRecapSession empty = new AfkRecapSession(AfkSessionTrigger.FOCUS, 0, Instant.EPOCH,
 			1, Instant.EPOCH, 600, Collections.emptyMap(), Collections.emptySet());
-		AwayRecapSession discarded = new AwayRecapSession(AwaySessionTrigger.IDLE, 0, Instant.EPOCH,
+		AfkRecapSession discarded = new AfkRecapSession(AfkSessionTrigger.IDLE, 0, Instant.EPOCH,
 			1, Instant.EPOCH, 600, Collections.singletonMap(Skill.HITPOINTS, 12L), Collections.emptySet());
 		assertFalse(history.add(empty));
 		assertFalse(history.add(discarded));
@@ -204,7 +204,7 @@ public class AwayRecapHistoryTest
 	public void snapshotIsDetachedFromLaterChanges()
 	{
 		history.add(focus(1));
-		List<AwayRecapSession> snapshot = history.snapshot();
+		List<AfkRecapSession> snapshot = history.snapshot();
 		history.clear();
 		assertEquals(1, snapshot.size());
 	}
@@ -218,17 +218,17 @@ public class AwayRecapHistoryTest
 	@Test
 	public void panelFormattingUsesLocalCompletionTimeAndGroupedXp()
 	{
-		AwayRecapSession focus = new AwayRecapSession(AwaySessionTrigger.FOCUS, 0, Instant.EPOCH,
+		AfkRecapSession focus = new AfkRecapSession(AfkSessionTrigger.FOCUS, 0, Instant.EPOCH,
 			33, Instant.parse("2026-10-04T02:09:00Z"), 19900,
 			Collections.singletonMap(Skill.WOODCUTTING, 337L), Collections.emptySet());
-		assertEquals("22:09 — Focus — 19.9s", AwayRecapPanelPresentation.header(focus,
+		assertEquals("22:09 — Focus — 19.9s", AfkRecapPanelPresentation.header(focus,
 			ZoneId.of("America/New_York")));
-		AwayRecapSession idle = new AwayRecapSession(AwaySessionTrigger.IDLE, 0, Instant.EPOCH,
+		AfkRecapSession idle = new AfkRecapSession(AfkSessionTrigger.IDLE, 0, Instant.EPOCH,
 			110, Instant.parse("2026-10-04T02:05:00Z"), 66000,
 			Collections.singletonMap(Skill.WOODCUTTING, 1050L), Collections.singleton(Skill.WOODCUTTING));
-		assertEquals("22:05 — Idle — 1m 06s", AwayRecapPanelPresentation.header(idle,
+		assertEquals("22:05 — Idle — 1m 06s", AfkRecapPanelPresentation.header(idle,
 			ZoneId.of("America/New_York")));
-		assertEquals("+1,050 XP", AwayRecapPanelPresentation.xp(1050));
+		assertEquals("+1,050 XP", AfkRecapPanelPresentation.xp(1050));
 	}
 
 	private boolean sidePanelEnabled = true;

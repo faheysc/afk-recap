@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -6,14 +6,15 @@ import java.util.EnumMap;
 import java.util.EnumSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import lombok.Getter;
 import net.runelite.api.Skill;
 
 /** Immutable completed-session data, independent of logging and rendering. */
 @Getter
-public final class AwayRecapSession
+public final class AfkRecapSession
 {
-	private final AwaySessionTrigger trigger;
+	private final AfkSessionTrigger trigger;
 	private final long startGameTick;
 	private final Instant startTimestamp;
 	private final long endGameTick;
@@ -21,10 +22,19 @@ public final class AwayRecapSession
 	private final long elapsedMillis;
 	private final Map<Skill, Long> xpGained;
 	private final Set<Skill> relevantIdleSkills;
+	private final Map<Integer, Integer> itemGains;
 
-	AwayRecapSession(AwaySessionTrigger trigger, long startGameTick, Instant startTimestamp,
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
 		long endGameTick, Instant endTimestamp, long elapsedMillis,
 		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills)
+	{
+		this(trigger, startGameTick, startTimestamp, endGameTick, endTimestamp, elapsedMillis,
+			xpGained, relevantIdleSkills, Collections.emptyMap());
+	}
+
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
+		long endGameTick, Instant endTimestamp, long elapsedMillis,
+		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains)
 	{
 		this.trigger = trigger;
 		this.startGameTick = startGameTick;
@@ -45,6 +55,20 @@ public final class AwayRecapSession
 		EnumSet<Skill> relevant = EnumSet.noneOf(Skill.class);
 		relevant.addAll(relevantIdleSkills);
 		this.relevantIdleSkills = Collections.unmodifiableSet(relevant);
+		Map<Integer, Integer> items = new TreeMap<>();
+		itemGains.forEach((id, quantity) ->
+		{
+			if (id >= 0 && quantity > 0)
+			{
+				items.put(id, quantity);
+			}
+		});
+		this.itemGains = Collections.unmodifiableMap(items);
+	}
+
+	public boolean hasGains()
+	{
+		return !xpGained.isEmpty() || !itemGains.isEmpty();
 	}
 
 	public long getElapsedGameTicks()

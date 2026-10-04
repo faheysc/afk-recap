@@ -1,22 +1,22 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 
-final class AwayRecapPanelPresentation
+final class AfkRecapPanelPresentation
 {
 	private static final DateTimeFormatter TIME = DateTimeFormatter.ofPattern("HH:mm");
 
-	private AwayRecapPanelPresentation()
+	private AfkRecapPanelPresentation()
 	{
 	}
 
-	static String header(AwayRecapSession recap, ZoneId zone)
+	static String header(AfkRecapSession recap, ZoneId zone)
 	{
-		String trigger = recap.getTrigger() == AwaySessionTrigger.FOCUS ? "Focus" : "Idle";
+		String trigger = recap.getTrigger() == AfkSessionTrigger.FOCUS ? "Focus" : "Idle";
 		long seconds = recap.getElapsedMillis() / 1000;
-		String duration = seconds < 60 ? AwayRecapController.formatDuration(recap.getElapsedMillis())
+		String duration = seconds < 60 ? AfkRecapController.formatDuration(recap.getElapsedMillis())
 			: String.format(Locale.ROOT, "%dm %02ds", seconds / 60, seconds % 60);
 		return TIME.format(recap.getEndTimestamp().atZone(zone)) + " — " + trigger + " — " + duration;
 	}

@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,7 +12,7 @@ import lombok.Getter;
 
 /** Presentation state shared by client events and overlay rendering; no game state mutations. */
 @Singleton
-public final class AwayRecapController
+public final class AfkRecapController
 {
 	private final LongSupplier nanoTime;
 	private Presentation presentation;
@@ -20,29 +20,35 @@ public final class AwayRecapController
 	private long displayDurationNanos;
 
 	@Inject
-	public AwayRecapController()
+	public AfkRecapController()
 	{
 		this(System::nanoTime);
 	}
 
-	AwayRecapController(LongSupplier nanoTime)
+	AfkRecapController(LongSupplier nanoTime)
 	{
 		this.nanoTime = nanoTime;
 	}
 
-	synchronized void show(AwayRecapSession recap, boolean enabled, int durationSeconds)
+	synchronized void show(AfkRecapSession recap, boolean enabled, int durationSeconds)
+	{
+		show(recap, enabled, durationSeconds, AfkRecapItemPresentation.empty());
+	}
+
+	synchronized void show(AfkRecapSession recap, boolean enabled, int durationSeconds,
+		AfkRecapItemPresentation.Display items)
 	{
 		if (!enabled)
 		{
 			clear();
 			return;
 		}
-		if (recap.getXpGained().isEmpty()
-			|| (recap.getTrigger() == AwaySessionTrigger.IDLE && recap.getRelevantIdleSkills().isEmpty()))
+		if (!recap.hasGains()
+			|| (recap.getTrigger() == AfkSessionTrigger.IDLE && recap.getRelevantIdleSkills().isEmpty()))
 		{
 			return;
 		}
-		presentation = new Presentation(recap);
+		presentation = new Presentation(recap, items);
 		displayedAtNanos = nanoTime.getAsLong();
 		displayDurationNanos = TimeUnit.SECONDS.toNanos(Math.max(3, Math.min(60, durationSeconds)));
 	}
@@ -78,11 +84,15 @@ public final class AwayRecapController
 		private final String duration;
 		private final String trigger;
 		private final List<XpRow> xpRows;
+		private final List<AfkRecapItemPresentation.ItemRow> itemRows;
+		private final String totalValue;
 
-		private Presentation(AwayRecapSession recap)
+		private Presentation(AfkRecapSession recap, AfkRecapItemPresentation.Display items)
 		{
+			itemRows = items.getRows();
+			totalValue = items.getTotalValue();
 			duration = formatDuration(recap.getElapsedMillis());
-			trigger = recap.getTrigger() == AwaySessionTrigger.FOCUS ? "Focus" : "Idle";
+			trigger = recap.getTrigger() == AfkSessionTrigger.FOCUS ? "Focus" : "Idle";
 			List<XpRow> rows = new ArrayList<>();
 			recap.getXpGained().forEach((skill, gained) ->
 			{

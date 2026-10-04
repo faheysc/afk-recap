@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import java.awt.BorderLayout;
 import java.awt.Graphics2D;
@@ -16,19 +16,21 @@ import net.runelite.client.ui.ColorScheme;
 import net.runelite.client.ui.DynamicGridLayout;
 import net.runelite.client.ui.PluginPanel;
 
-public final class AwayRecapPanel extends PluginPanel
+public final class AfkRecapPanel extends PluginPanel
 {
-	private final AwayRecapHistory history;
+	private final AfkRecapHistory history;
+	private final AfkRecapItemPresentation itemPresentation;
 	private final JPanel entries = new JPanel(new DynamicGridLayout(0, 1, 0, 6));
 	private final JButton clearHistory = new JButton("Clear History");
 
-	AwayRecapPanel(AwayRecapHistory history)
+	AfkRecapPanel(AfkRecapHistory history, AfkRecapItemPresentation itemPresentation)
 	{
 		this.history = history;
+		this.itemPresentation = itemPresentation;
 		setLayout(new BorderLayout(0, 8));
 		JPanel header = new JPanel(new BorderLayout(0, 6));
 		header.setOpaque(false);
-		JLabel title = new JLabel("Away Recap");
+		JLabel title = new JLabel("AFK Recap");
 		title.setForeground(ColorScheme.BRAND_ORANGE);
 		header.add(title, BorderLayout.NORTH);
 		header.add(clearHistory, BorderLayout.SOUTH);
@@ -46,7 +48,7 @@ public final class AwayRecapPanel extends PluginPanel
 	void refresh()
 	{
 		assert SwingUtilities.isEventDispatchThread();
-		List<AwayRecapSession> recaps = history.snapshot();
+		List<AfkRecapSession> recaps = history.snapshot();
 		entries.removeAll();
 		clearHistory.setEnabled(!recaps.isEmpty());
 		if (recaps.isEmpty())
@@ -57,7 +59,7 @@ public final class AwayRecapPanel extends PluginPanel
 		}
 		else
 		{
-			for (AwayRecapSession recap : recaps)
+			for (AfkRecapSession recap : recaps)
 			{
 				entries.add(entry(recap));
 			}
@@ -66,12 +68,12 @@ public final class AwayRecapPanel extends PluginPanel
 		entries.repaint();
 	}
 
-	private JPanel entry(AwayRecapSession recap)
+	private JPanel entry(AfkRecapSession recap)
 	{
 		JPanel card = new JPanel(new BorderLayout(0, 5));
 		card.setBackground(ColorScheme.DARKER_GRAY_COLOR);
 		card.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
-		JLabel heading = new JLabel(AwayRecapPanelPresentation.header(recap, ZoneId.systemDefault()));
+		JLabel heading = new JLabel(AfkRecapPanelPresentation.header(recap, ZoneId.systemDefault()));
 		heading.setForeground(ColorScheme.TEXT_COLOR);
 		card.add(heading, BorderLayout.NORTH);
 		JPanel xpRows = new JPanel(new GridLayout(0, 1, 0, 2));
@@ -81,9 +83,34 @@ public final class AwayRecapPanel extends PluginPanel
 			JPanel row = new JPanel(new BorderLayout(6, 0));
 			row.setOpaque(false);
 			row.add(new JLabel(skill.getName()), BorderLayout.WEST);
-			row.add(new JLabel(AwayRecapPanelPresentation.xp(gained)), BorderLayout.EAST);
+			row.add(new JLabel(AfkRecapPanelPresentation.xp(gained)), BorderLayout.EAST);
 			xpRows.add(row);
 		});
+		AfkRecapItemPresentation.Display items = itemPresentation.get(recap);
+		if (!items.getRows().isEmpty())
+		{
+			JLabel itemHeading = new JLabel("Items gained");
+			itemHeading.setForeground(ColorScheme.LIGHT_GRAY_COLOR);
+			xpRows.add(itemHeading);
+			for (AfkRecapItemPresentation.ItemRow item : items.getRows())
+			{
+				JPanel row = new JPanel(new BorderLayout(6, 0));
+				row.setOpaque(false);
+				JLabel name = new JLabel(item.getName());
+				name.setToolTipText(item.getName());
+				row.add(name, BorderLayout.CENTER);
+				row.add(new JLabel(item.getQuantityAndValue()), BorderLayout.EAST);
+				xpRows.add(row);
+			}
+			if (items.getTotalValue() != null)
+			{
+				JPanel total = new JPanel(new BorderLayout(6, 0));
+				total.setOpaque(false);
+				total.add(new JLabel("Total value:"), BorderLayout.WEST);
+				total.add(new JLabel(items.getTotalValue()), BorderLayout.EAST);
+				xpRows.add(total);
+			}
+		}
 		card.add(xpRows, BorderLayout.CENTER);
 		return card;
 	}

@@ -1,4 +1,4 @@
-package com.awayrecap;
+package com.afkrecap;
 
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -10,11 +10,11 @@ import org.junit.Test;
 import org.slf4j.LoggerFactory;
 import static org.junit.Assert.*;
 
-public class AwaySessionManagerTest
+public class AfkSessionManagerTest
 {
-	private final AwayRecapConfig config = new AwayRecapConfig() {};
+	private final AfkRecapConfig config = new AfkRecapConfig() {};
 
-	private void ticks(AwaySessionManager manager, int count)
+	private void ticks(AfkSessionManager manager, int count)
 	{
 		for (int i = 0; i < count; i++)
 		{
@@ -25,11 +25,11 @@ public class AwaySessionManagerTest
 	@Test
 	public void relevantIdleSessionRearmsFromTheInputThatEndsIt()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.baseline(Collections.singletonMap(Skill.WOODCUTTING, 100));
 		manager.manualInput();
 		ticks(manager, 10);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		manager.statChanged(Skill.WOODCUTTING, 110);
 		assertEquals(Collections.singleton(Skill.WOODCUTTING), manager.relevantSkills());
 
@@ -43,7 +43,7 @@ public class AwaySessionManagerTest
 			assertNull(manager.trigger());
 		}
 		ticks(manager, 1);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		assertTrue(manager.relevantSkills().isEmpty());
 		manager.statChanged(Skill.WOODCUTTING, 210);
 		assertEquals(Collections.singleton(Skill.WOODCUTTING), manager.relevantSkills());
@@ -52,10 +52,10 @@ public class AwaySessionManagerTest
 	@Test
 	public void discardedIdleCandidateRearmsFromTheInputThatEndsIt()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.manualInput();
 		ticks(manager, 10);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		assertTrue(manager.relevantSkills().isEmpty());
 
 		manager.manualInput();
@@ -63,19 +63,19 @@ public class AwaySessionManagerTest
 		ticks(manager, 9);
 		assertNull(manager.trigger());
 		ticks(manager, 1);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		assertTrue(manager.relevantSkills().isEmpty());
 	}
 
 	@Test
 	public void idleStartsAtThresholdWithoutRecentXp()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.baseline(Collections.singletonMap(Skill.FISHING, 100));
 		ticks(manager, 9);
 		assertNull(manager.trigger());
 		ticks(manager, 1);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		assertTrue(manager.relevantSkills().isEmpty());
 		manager.statChanged(Skill.FISHING, 110);
 		assertTrue(manager.relevantSkills().contains(Skill.FISHING));
@@ -86,13 +86,13 @@ public class AwaySessionManagerTest
 	@Test
 	public void manualInputResetsInactivityAndEndsEmptyCandidate()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		ticks(manager, 9);
 		manager.manualInput();
 		ticks(manager, 9);
 		assertNull(manager.trigger());
 		ticks(manager, 1);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		assertTrue(manager.relevantSkills().isEmpty());
 		manager.manualInput();
 		assertNull(manager.trigger());
@@ -103,11 +103,11 @@ public class AwaySessionManagerTest
 	@Test
 	public void onlyActualEnabledXpIncreasesMakeIdleRelevant()
 	{
-		AwayRecapConfig fishingOnly = new AwayRecapConfig()
+		AfkRecapConfig fishingOnly = new AfkRecapConfig()
 		{
 			@Override public boolean idleMining() { return false; }
 		};
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.statChanged(Skill.FISHING, 100);
 		manager.statChanged(Skill.MINING, 100);
 		for (int i = 0; i < 10; i++)
@@ -125,7 +125,7 @@ public class AwaySessionManagerTest
 	@Test
 	public void initialStatAndPreSessionXpAreNotActivity()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.statChanged(Skill.FISHING, 100);
 		manager.statChanged(Skill.FISHING, 110);
 		ticks(manager, 10);
@@ -136,13 +136,13 @@ public class AwaySessionManagerTest
 	@Test
 	public void focusDoesNotReplaceOrEndIdleCandidate()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.statChanged(Skill.WOODCUTTING, 100);
 		ticks(manager, 10);
 		manager.statChanged(Skill.WOODCUTTING, 110);
 		manager.focusChanged(false, config);
 		manager.focusChanged(true, config);
-		assertEquals(AwaySessionTrigger.IDLE, manager.trigger());
+		assertEquals(AfkSessionTrigger.IDLE, manager.trigger());
 		assertEquals(Collections.singleton(Skill.WOODCUTTING), manager.relevantSkills());
 		manager.manualInput();
 		assertNull(manager.trigger());
@@ -151,12 +151,12 @@ public class AwaySessionManagerTest
 	@Test
 	public void idleAndManualInputDoNotReplaceOrEndFocusSession()
 	{
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.focusChanged(false, config);
 		ticks(manager, 20);
 		manager.focusChanged(false, config);
 		manager.manualInput();
-		assertEquals(AwaySessionTrigger.FOCUS, manager.trigger());
+		assertEquals(AfkSessionTrigger.FOCUS, manager.trigger());
 		manager.focusChanged(true, config);
 		assertNull(manager.trigger());
 		ticks(manager, 9);
@@ -166,12 +166,12 @@ public class AwaySessionManagerTest
 	@Test
 	public void disabledTriggersDoNotStartSessions()
 	{
-		AwayRecapConfig disabled = new AwayRecapConfig()
+		AfkRecapConfig disabled = new AfkRecapConfig()
 		{
 			@Override public boolean startOnFocusLoss() { return false; }
 			@Override public boolean startOnIdle() { return false; }
 		};
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.focusChanged(false, disabled);
 		for (int i = 0; i < 100; i++)
 		{
@@ -183,11 +183,11 @@ public class AwaySessionManagerTest
 	@Test
 	public void enabledSkillsAreSnapshottedForEachCandidate()
 	{
-		AwayRecapConfig mutable = new AwayRecapConfig()
+		AfkRecapConfig mutable = new AfkRecapConfig()
 		{
 			@Override public boolean idleFishing() { return fishingEnabled; }
 		};
-		AwaySessionManager manager = new AwaySessionManager();
+		AfkSessionManager manager = new AfkSessionManager();
 		manager.statChanged(Skill.FISHING, 100);
 		for (int i = 0; i < 10; i++)
 		{
@@ -210,14 +210,14 @@ public class AwaySessionManagerTest
 	@Test
 	public void endLogsReportOutcomeAndElapsedTicksAndTime()
 	{
-		Logger logger = (Logger) LoggerFactory.getLogger(AwaySessionManager.class);
+		Logger logger = (Logger) LoggerFactory.getLogger(AfkSessionManager.class);
 		ListAppender<ILoggingEvent> appender = new ListAppender<>();
 		appender.start();
 		logger.addAppender(appender);
 		try
 		{
 			AtomicLong now = new AtomicLong();
-			AwaySessionManager manager = new AwaySessionManager(now::get);
+			AfkSessionManager manager = new AfkSessionManager(now::get);
 			manager.statChanged(Skill.FISHING, 100);
 			ticks(manager, 10);
 			ticks(manager, 3);
