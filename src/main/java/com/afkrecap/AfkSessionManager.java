@@ -104,6 +104,10 @@ final class AfkSessionManager
 		{
 			return;
 		}
+		if (session != null)
+		{
+			session.inventory.gameTick();
+		}
 		gameTicks++;
 		inactiveTicks = Math.min(100, inactiveTicks + 1);
 		int threshold = Math.max(1, Math.min(100, config.idleGameTicks()));
@@ -222,7 +226,23 @@ final class AfkSessionManager
 	{
 		if (session != null)
 		{
-			session.inventory.update(inventory);
+			session.inventory.inventoryChanged(inventory);
+		}
+	}
+
+	void acquisitionMessage(String message, boolean fishStorage, boolean logStorage)
+	{
+		if (session != null)
+		{
+			session.inventory.message(message, fishStorage, logStorage);
+		}
+	}
+
+	void resourceTransfer(ResourceAcquisitionMessages.Family family)
+	{
+		if (session != null)
+		{
+			session.inventory.transfer(family);
 		}
 	}
 
@@ -317,7 +337,7 @@ final class AfkSessionManager
 		private final Instant startTimestamp;
 		private final Map<Skill, Long> xpGained = new EnumMap<>(Skill.class);
 		private final Set<Skill> enabledSkills;
-		private final InventoryGainTracker inventory;
+		private final ResourceAcquisitionTracker inventory;
 		private final NpcKillTracker kills = new NpcKillTracker();
 		private long prayerUsed;
 		private long damageTaken;
@@ -330,7 +350,7 @@ final class AfkSessionManager
 			this.startTick = startTick;
 			this.startNanos = startNanos;
 			this.startTimestamp = startTimestamp;
-			this.inventory = new InventoryGainTracker(inventoryBaseline);
+			this.inventory = new ResourceAcquisitionTracker(inventoryBaseline);
 			this.enabledSkills = EnumSet.noneOf(Skill.class);
 			this.enabledSkills.addAll(enabledSkills);
 		}

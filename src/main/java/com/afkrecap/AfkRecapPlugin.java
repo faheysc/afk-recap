@@ -6,10 +6,20 @@ import java.awt.event.MouseEvent;
 import java.time.Instant;
 import java.util.EnumMap;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.Locale;
+import com.afkrecap.ResourceAcquisitionMessages.Family;
 import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.ChatMessageType;
+import net.runelite.api.Item;
+import net.runelite.api.widgets.Widget;
+import net.runelite.api.events.ChatMessage;
+import net.runelite.api.events.MenuOptionClicked;
+import net.runelite.client.util.Text;
 import net.runelite.api.NPC;
 import net.runelite.api.Hitsplat;
 import net.runelite.api.events.ActorDeath;
@@ -278,6 +288,113 @@ public class AfkRecapPlugin extends Plugin
 			ItemContainer inventory = event.getItemContainer();
 			current.inventoryChanged(inventory == null ? null : InventoryGainTracker.totals(inventory.getItems()));
 		}
+	}
+
+	@Subscribe
+	public void onChatMessage(ChatMessage event)
+	{
+		AfkSessionManager current = sessions;
+		if (current == null || client.getGameState() != GameState.LOGGED_IN || !current.isReady())
+		{
+			return;
+		}
+		String message = Text.removeTags(event.getMessage());
+		if (event.getType() == ChatMessageType.GAMEMESSAGE)
+		{
+			switch (message)
+			{
+				case "You empty your basket.":
+				case "You empty as many logs as you can carry.":
+				case "You empty your basket into the bank.":
+					current.resourceTransfer(Family.LOG);
+					break;
+				case "You empty all of your containers into the bank.":
+					current.resourceTransfer(Family.FISH);
+					current.resourceTransfer(Family.LOG);
+					break;
+				default:
+					break;
+			}
+		}
+		if (ResourceAcquisitionMessages.acceptsChat(Family.LOG, event.getType()))
+		{
+			ResourceContainerState storage = resourceContainerState();
+			current.acquisitionMessage(message,
+				ResourceAcquisitionMessages.acceptsChat(Family.FISH, event.getType()) && storage.hiddenFish(),
+				storage.hiddenLogs());
+		}
+	}
+
+	@Subscribe
+	public void onMenuOptionClicked(MenuOptionClicked event)
+	{
+		AfkSessionManager current = sessions;
+		if (current == null || client.getGameState() != GameState.LOGGED_IN || !current.isReady())
+		{
+			return;
+		}
+		String option = Text.removeTags(event.getMenuOption()).toLowerCase(Locale.ROOT);
+		Widget widget = event.getWidget();
+		Family container = widget == null ? null : ResourceAcquisitionMessages.container(widget.getItemId());
+		if (container == null)
+		{
+			container = ResourceAcquisitionMessages.container(event.getItemId());
+		}
+		// Item-on-container and container-on-bank-stand transfers have different target widgets.
+		switch (event.getMenuAction())
+		{
+			case WIDGET_TARGET_ON_WIDGET:
+			case WIDGET_TARGET_ON_GAME_OBJECT:
+			case WIDGET_TARGET_ON_NPC:
+				Widget selected = client.getSelectedWidget();
+				Family selectedContainer = selected == null ? null
+					: ResourceAcquisitionMessages.container(selected.getItemId());
+				if (container != null || selectedContainer != null)
+				{
+					current.resourceTransfer(container != null ? container : selectedContainer);
+				}
+				return;
+			default:
+				break;
+		}
+		if (container != null && (option.equals("fill") || option.startsWith("empty")))
+		{
+			current.resourceTransfer(container);
+		}
+		else if (widget != null && (option.startsWith("withdraw") || option.startsWith("deposit")
+			|| option.equals("empty basket")))
+		{
+			// Bank buttons and the forestry equipment interface may not carry an item ID.
+			ResourceContainerState storage = resourceContainerState();
+			for (Family family : Family.values())
+			{
+				if (storage.hasContainer(family))
+				{
+					current.resourceTransfer(family);
+				}
+			}
+		}
+		// Check dialogs are intentionally not subscribed to: their contents are synchronization.
+	}
+
+	private ResourceContainerState resourceContainerState()
+	{
+		Set<Integer> items = new HashSet<>();
+		for (int containerId : new int[]{InventoryID.INV, InventoryID.WORN})
+		{
+			ItemContainer container = client.getItemContainer(containerId);
+			if (container != null)
+			{
+				for (Item item : container.getItems())
+				{
+					if (item != null && item.getId() >= 0 && item.getQuantity() > 0)
+					{
+						items.add(item.getId());
+					}
+				}
+			}
+		}
+		return new ResourceContainerState(items);
 	}
 
 	private Map<Integer, Integer> inventorySnapshot()

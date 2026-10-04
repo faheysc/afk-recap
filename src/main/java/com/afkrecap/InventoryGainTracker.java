@@ -3,6 +3,7 @@ package com.afkrecap;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.IntPredicate;
 import net.runelite.api.Item;
 
 /** Acquisition deltas across inventory snapshots; null means the baseline is unavailable. */
@@ -18,10 +19,17 @@ final class InventoryGainTracker
 
 	void update(Map<Integer, Integer> current)
 	{
+		update(current, id -> true);
+	}
+
+	/** Return positive deltas while allowing the caller to defer selected resources. */
+	Map<Integer, Integer> update(Map<Integer, Integer> current, IntPredicate countImmediately)
+	{
+		Map<Integer, Integer> additions = new HashMap<>();
 		if (current == null)
 		{
 			previous = null;
-			return;
+			return additions;
 		}
 		if (previous != null)
 		{
@@ -30,11 +38,24 @@ final class InventoryGainTracker
 				int difference = quantity - previous.getOrDefault(id, 0);
 				if (difference > 0)
 				{
-					gains.merge(id, difference, InventoryGainTracker::addQuantities);
+					additions.put(id, difference);
+					if (countImmediately.test(id))
+					{
+						addGain(id, difference);
+					}
 				}
 			});
 		}
 		previous = new HashMap<>(current);
+		return additions;
+	}
+
+	void addGain(int id, int quantity)
+	{
+		if (quantity > 0)
+		{
+			gains.merge(id, quantity, InventoryGainTracker::addQuantities);
+		}
 	}
 
 	Map<Integer, Integer> gains()
@@ -59,7 +80,7 @@ final class InventoryGainTracker
 		return quantities;
 	}
 
-	private static int addQuantities(int first, int second)
+	static int addQuantities(int first, int second)
 	{
 		// The recap contract uses Integer quantities; do not overflow into negative gains.
 		return (int) Math.min(Integer.MAX_VALUE, (long) first + second);
