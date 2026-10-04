@@ -33,8 +33,8 @@ public class AfkRecapResourceTest
 		assertEquals(Map.of(ItemID.RAW_TROUT, 1), recaps.get(1).getItemGains());
 	}
 	@Test public void outsideSessionMessagesIgnored() { fish(); start(); end(); assertTrue(recaps.isEmpty()); }
-	@Test public void logoutDiscardsPendingEvidence() { assertBoundary(GameState.LOGIN_SCREEN); }
-	@Test public void worldHopDiscardsPendingEvidence() { assertBoundary(GameState.HOPPING); }
+	@Test public void logoutFinalizesPendingEvidence() { assertBoundary(GameState.LOGIN_SCREEN); }
+	@Test public void worldHopFinalizesPendingEvidence() { assertBoundary(GameState.HOPPING); }
 	@Test public void shutdownDiscardsPendingEvidence()
 	{
 		start(); fish(); manager.suspend(); manager.loggedIn(Collections.emptyMap(), 99);
@@ -43,9 +43,10 @@ public class AfkRecapResourceTest
 	private void assertBoundary(GameState state)
 	{
 		start(); fish(); manager.gameStateChanged(state); fish();
-		manager.loggedIn(Collections.emptyMap(), 99); start(); end(); assertTrue(recaps.isEmpty());
-		start(); manager.inventoryChanged(Map.of(ItemID.RAW_TROUT, 1)); end();
+		manager.loggedIn(Collections.emptyMap(), 99); start(); end(); assertEquals(1, recaps.size());
 		assertEquals(Map.of(ItemID.RAW_TROUT, 1), recaps.get(0).getItemGains());
+		start(); manager.inventoryChanged(Map.of(ItemID.RAW_TROUT, 1)); end();
+		assertEquals(Map.of(ItemID.RAW_TROUT, 1), recaps.get(1).getItemGains());
 	}
 	@Test public void hiddenGainsDoNotQualifyIdleCandidate()
 	{

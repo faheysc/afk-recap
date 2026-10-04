@@ -144,9 +144,9 @@ public class AfkRecapPlugin extends Plugin
 		{
 			if (recapLifecycle == lifecycle)
 			{
+				recapHistory.add(recap);
 				AfkRecapItemPresentation.Display items = itemPresentation.prepare(recap);
 				recapController.show(recap, config.showOverlay(), config.overlayDurationSeconds(), items);
-				recapHistory.add(recap);
 				refreshSidePanel();
 			}
 		}, this::inventorySnapshot);
@@ -421,6 +421,11 @@ public class AfkRecapPlugin extends Plugin
 	@Subscribe
 	public void onGameStateChanged(GameStateChanged event)
 	{
+		if (event.getGameState() != GameState.LOGGED_IN)
+		{
+			// An earlier return overlay must not remain on the login/reconnect screen either.
+			recapController.clear();
+		}
 		AfkSessionManager current = sessions;
 		if (current != null)
 		{

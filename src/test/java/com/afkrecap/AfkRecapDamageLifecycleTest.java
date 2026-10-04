@@ -137,7 +137,7 @@ public class AfkRecapDamageLifecycleTest
 		assertEquals(Long.valueOf(25), end().getXpGained().get(Skill.ATTACK));
 	}
 
-	@Test public void logoutCancelsActiveSessionWithoutRecap()
+	@Test public void logoutFinalizesActiveSession()
 	{
 		start();
 		manager.statChanged(Skill.ATTACK, 1010);
@@ -145,10 +145,12 @@ public class AfkRecapDamageLifecycleTest
 		manager.gameStateChanged(GameState.LOGIN_SCREEN);
 		manager.focusChanged(true, config);
 		assertNull(manager.trigger());
-		assertTrue(recaps.isEmpty());
+		assertEquals(1, recaps.size());
+		assertEquals(AfkSessionEndReason.LOGOUT_OR_DISCONNECT, recaps.get(0).getEndReason());
+		assertEquals(40, recaps.get(0).getDamageTaken());
 	}
 
-	@Test public void worldHopCancelsAndNewWorldHasFreshBaselinesAndTrackers()
+	@Test public void worldHopFinalizesAndNewWorldHasFreshBaselinesAndTrackers()
 	{
 		start();
 		Object npc = new Object();
@@ -159,7 +161,9 @@ public class AfkRecapDamageLifecycleTest
 		manager.inventoryChanged(Collections.singletonMap(net.runelite.api.gameval.ItemID.COINS, 10));
 		manager.gameStateChanged(GameState.HOPPING);
 		assertNull(manager.trigger());
-		assertTrue(recaps.isEmpty());
+		assertEquals(1, recaps.size());
+		assertEquals(AfkSessionEndReason.WORLD_HOP, recaps.get(0).getEndReason());
+		recaps.clear();
 		manager.statChanged(Skill.ATTACK, 2000);
 		manager.gameStateChanged(GameState.LOGGED_IN);
 		login(2000);

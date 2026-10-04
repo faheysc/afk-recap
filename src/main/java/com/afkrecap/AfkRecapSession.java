@@ -15,6 +15,7 @@ import net.runelite.api.Skill;
 public final class AfkRecapSession
 {
 	private final AfkSessionTrigger trigger;
+	private final AfkSessionEndReason endReason;
 	private final long startGameTick;
 	private final Instant startTimestamp;
 	private final long endGameTick;
@@ -57,6 +58,16 @@ public final class AfkRecapSession
 		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
 		Map<String, Integer> npcKills, long prayerUsed, long damageTaken)
 	{
+		this(trigger, startGameTick, startTimestamp, endGameTick, endTimestamp, elapsedMillis,
+			xpGained, relevantIdleSkills, itemGains, npcKills, prayerUsed, damageTaken, AfkSessionEndReason.UNSPECIFIED);
+	}
+
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
+		long endGameTick, Instant endTimestamp, long elapsedMillis,
+		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
+		Map<String, Integer> npcKills, long prayerUsed, long damageTaken, AfkSessionEndReason endReason)
+	{
+		this.endReason = endReason;
 		this.damageTaken = Math.max(0, damageTaken);
 		Map<String, Integer> kills = new TreeMap<>();
 		npcKills.forEach((name, count) ->

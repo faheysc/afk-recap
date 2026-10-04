@@ -39,7 +39,7 @@ public final class AfkRecapController
 	synchronized void show(AfkRecapSession recap, boolean enabled, int durationSeconds,
 		AfkRecapItemPresentation.Display items)
 	{
-		if (!enabled)
+		if (!enabled || recap.getEndReason().isGameExit())
 		{
 			clear();
 			return;

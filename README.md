@@ -29,8 +29,10 @@ input; it does not send game inputs or automate gameplay.
   is not saved across client restarts. Items show quantities and approximate values
   where available.
 
-Login, logout, reconnects, and world hops discard unfinished sessions and reset
-baselines so login XP synchronization is not counted as a gain.
+Logout, disconnects, and world hops finish qualifying sessions and immediately
+save them in recent history without opening an overlay on the login screen.
+Irrelevant idle candidates and empty focus sessions are discarded. Fresh login
+baselines prevent synchronization gains or data carrying over between worlds.
 
 ## Known limitations
 

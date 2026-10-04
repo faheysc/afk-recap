@@ -54,7 +54,7 @@ final class AfkSessionManager
 		this.recapConsumer = recapConsumer;
 	}
 
-	// Login, loading, hopping and reconnecting discard unfinished data without publishing it.
+	// Clear transient state without publishing (startup, shutdown, synchronization, or after finalization).
 	void suspend()
 	{
 		ready = false;
@@ -66,8 +66,19 @@ final class AfkSessionManager
 
 	void gameStateChanged(GameState state)
 	{
-		// Even LOGGED_IN waits for the first stable game tick before accepting activity.
-		suspend();
+		try
+		{
+			AfkSessionEndReason reason = AfkSessionEndReason.forGameState(state);
+			if (session != null && reason != null)
+			{
+				end(reason, "game state " + state);
+			}
+		}
+		finally
+		{
+			// Even LOGGED_IN waits for the first stable game tick before accepting activity.
+			suspend();
+		}
 		log.debug("Recap collection suspended for game state {}", state);
 	}
 
@@ -128,7 +139,7 @@ final class AfkSessionManager
 		{
 			if (trigger() == AfkSessionTrigger.FOCUS)
 			{
-				end("focus regained");
+				end(AfkSessionEndReason.FOCUS_RETURN, "focus regained");
 				inactiveTicks = 0;
 			}
 		}
@@ -146,7 +157,7 @@ final class AfkSessionManager
 		}
 		if (trigger() == AfkSessionTrigger.IDLE)
 		{
-			end("manual input");
+			end(AfkSessionEndReason.MANUAL_INPUT, "manual input");
 		}
 		// This same input begins the next inactivity period, even when it ends a session.
 		inactiveTicks = 0;
@@ -243,7 +254,7 @@ final class AfkSessionManager
 	{
 		if (session != null)
 		{
-			end(reason);
+			end(AfkSessionEndReason.UNSPECIFIED, reason);
 		}
 		inactiveTicks = 0;
 		experience.clear();
@@ -266,7 +277,7 @@ final class AfkSessionManager
 		log.debug("Away session started: trigger={}, gameTick={}, enabledSkills={}", trigger, gameTicks, enabledSkills);
 	}
 
-	private void end(String reason)
+	private void end(AfkSessionEndReason endReason, String reason)
 	{
 		Session ended = session;
 		session = null;
@@ -289,7 +300,7 @@ final class AfkSessionManager
 		{
 			AfkRecapSession recap = new AfkRecapSession(ended.trigger, ended.startTick,
 				ended.startTimestamp, gameTicks, endTimestamp, elapsedMillis,
-				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken);
+				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken, endReason);
 			logRecap(recap);
 			// Hand off an immutable snapshot; no session history or permanent storage.
 			recapConsumer.accept(recap);
