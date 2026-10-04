@@ -226,6 +226,31 @@ final class AfkSessionManager
 		}
 	}
 
+	void groundSpawn(Object pile, int id, int quantity, int ownership, long price, boolean clue, AfkRecapConfig config)
+	{
+		if (session != null)
+		{
+			session.drops.spawn(pile, id, quantity, ownership, price, clue, config);
+		}
+	}
+
+	void groundQuantityChanged(Object pile, int id, int oldQuantity, int newQuantity, int ownership,
+		long price, boolean clue, AfkRecapConfig config)
+	{
+		if (session != null)
+		{
+			session.drops.quantityChanged(pile, id, oldQuantity, newQuantity, ownership, price, clue, config);
+		}
+	}
+
+	void groundDespawn(Object pile)
+	{
+		if (session != null)
+		{
+			session.drops.despawn(pile);
+		}
+	}
+
 	void inventoryChanged(Map<Integer, Integer> inventory)
 	{
 		if (session != null)
@@ -295,12 +320,12 @@ final class AfkSessionManager
 			ended.trigger, reason, outcome, ended.relevantSkills, ticks, elapsedMillis);
 		Map<Integer, Integer> itemGains = ended.inventory.gains();
 		if ((!ended.xpGained.isEmpty() || !itemGains.isEmpty() || !ended.kills.totals().isEmpty()
-			|| ended.prayerUsed > 0 || ended.damageTaken > 0)
+			|| !ended.drops.totals().isEmpty() || ended.prayerUsed > 0 || ended.damageTaken > 0)
 			&& (ended.trigger == AfkSessionTrigger.FOCUS || !ended.relevantSkills.isEmpty()))
 		{
 			AfkRecapSession recap = new AfkRecapSession(ended.trigger, ended.startTick,
 				ended.startTimestamp, gameTicks, endTimestamp, elapsedMillis,
-				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken, endReason);
+				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken, endReason, ended.drops.totals());
 			logRecap(recap);
 			// Hand off an immutable snapshot; no session history or permanent storage.
 			recapConsumer.accept(recap);
@@ -343,6 +368,7 @@ final class AfkSessionManager
 		private final Set<Skill> enabledSkills;
 		private final ResourceAcquisitionTracker inventory;
 		private final NpcKillTracker kills = new NpcKillTracker();
+		private final NotableDropTracker drops = new NotableDropTracker();
 		private long prayerUsed;
 		private long damageTaken;
 		private final EnumSet<Skill> relevantSkills = EnumSet.noneOf(Skill.class);

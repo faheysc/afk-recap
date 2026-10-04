@@ -16,6 +16,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
 import net.runelite.api.ChatMessageType;
 import net.runelite.api.Item;
+import net.runelite.api.ItemComposition;
+import net.runelite.api.ParamID;
+import net.runelite.api.TileItem;
+import net.runelite.api.events.ItemSpawned;
+import net.runelite.api.events.ItemDespawned;
+import net.runelite.api.events.ItemQuantityChanged;
+import net.runelite.client.game.ItemManager;
 import net.runelite.api.widgets.Widget;
 import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuOptionClicked;
@@ -87,6 +94,9 @@ public class AfkRecapPlugin extends Plugin
 
 	@Inject
 	private AfkRecapItemPresentation itemPresentation;
+
+	@Inject
+	private ItemManager itemManager;
 
 	// Panel and navigation state are accessed only on the Swing EDT.
 	private AfkRecapPanel sidePanel;
@@ -287,6 +297,76 @@ public class AfkRecapPlugin extends Plugin
 		{
 			ItemContainer inventory = event.getItemContainer();
 			current.inventoryChanged(inventory == null ? null : InventoryGainTracker.totals(inventory.getItems()));
+		}
+	}
+
+	@Subscribe
+	public void onItemSpawned(ItemSpawned event)
+	{
+		trackGroundItem(event.getItem(), -1, event.getItem() == null ? 0 : event.getItem().getQuantity());
+	}
+
+	@Subscribe
+	public void onItemQuantityChanged(ItemQuantityChanged event)
+	{
+		trackGroundItem(event.getItem(), event.getOldQuantity(), event.getNewQuantity());
+	}
+
+	private void trackGroundItem(TileItem item, int oldQuantity, int quantity)
+	{
+		AfkSessionManager current = sessions;
+		if (current == null || current.trigger() == null || !current.isReady()
+			|| client.getGameState() != GameState.LOGGED_IN || !config.trackNotableDrops()
+			|| item == null || quantity < 0 || item.getId() < 0
+			|| !NotableDropTracker.attributed(item.getOwnership()))
+		{
+			return;
+		}
+		if (oldQuantity >= 0 && quantity <= oldQuantity)
+		{
+			current.groundQuantityChanged(item, item.getId(), oldQuantity, quantity, item.getOwnership(), 0, false, config);
+			return;
+		}
+		try
+		{
+			int id = item.getId();
+			ItemComposition definition = itemManager.getItemComposition(id);
+			if (definition == null)
+			{
+				return;
+			}
+			boolean clue = ClueDropItems.isClue(id, definition.getIntValue(ParamID.CLUE_SCROLL));
+			long price = -1;
+			try
+			{
+				price = itemManager.getItemPrice(id);
+			}
+			catch (RuntimeException exception)
+			{
+				log.debug("Unable to price notable ground item {}", id, exception);
+			}
+			if (oldQuantity < 0)
+			{
+				current.groundSpawn(item, id, quantity, item.getOwnership(), price, clue, config);
+			}
+			else
+			{
+				current.groundQuantityChanged(item, id, oldQuantity, quantity, item.getOwnership(), price, clue, config);
+			}
+		}
+		catch (RuntimeException exception)
+		{
+			log.debug("Unable to resolve notable ground item {}", item.getId(), exception);
+		}
+	}
+
+	@Subscribe
+	public void onItemDespawned(ItemDespawned event)
+	{
+		AfkSessionManager current = sessions;
+		if (current != null && current.trigger() != null)
+		{
+			current.groundDespawn(event.getItem());
 		}
 	}
 

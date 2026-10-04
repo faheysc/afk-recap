@@ -92,4 +92,23 @@ public interface AfkRecapConfig extends Config
 	{
 		return 20;
 	}
+	@ConfigItem(keyName = "trackNotableDrops", name = "Track notable drops", description = "Record notable ground drops owned by the local player during a session", position = 13)
+	default boolean trackNotableDrops()
+	{
+		return true;
+	}
+
+	@Range(min = 0, max = Integer.MAX_VALUE)
+	@ConfigItem(keyName = "notableDropValue", name = "Notable drop value", description = "Minimum approximate GE value of a newly spawned stack or stack addition", position = 14)
+	default int notableDropValue()
+	{
+		return 100000;
+	}
+
+	@ConfigItem(keyName = "alwaysTrackClues", name = "Always track clues", description = "Include owned clue scroll drops regardless of value when notable-drop tracking is enabled", position = 15)
+	default boolean alwaysTrackClues()
+	{
+		return true;
+	}
+
 }

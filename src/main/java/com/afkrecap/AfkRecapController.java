@@ -86,6 +86,7 @@ public final class AfkRecapController
 		private final String trigger;
 		private final List<XpRow> xpRows;
 		private final List<AfkRecapItemPresentation.ItemRow> itemRows;
+		private final List<AfkRecapItemPresentation.ItemRow> notableDropRows;
 		private final String totalValue;
 		private final Map<String, Integer> npcKills;
 		private final String prayerUsed;
@@ -97,6 +98,7 @@ public final class AfkRecapController
 			npcKills = recap.getNpcKills();
 			prayerUsed = recap.getPrayerUsed() > 0 ? Long.toString(recap.getPrayerUsed()) : null;
 			itemRows = items.getRows();
+			notableDropRows = items.getNotableRows();
 			totalValue = items.getTotalValue();
 			duration = formatDuration(recap.getElapsedMillis());
 			trigger = recap.getTrigger() == AfkSessionTrigger.FOCUS ? "Focus" : "Idle";

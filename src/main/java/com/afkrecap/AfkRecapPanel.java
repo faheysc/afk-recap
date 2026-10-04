@@ -109,6 +109,19 @@ public final class AfkRecapPanel extends PluginPanel
 		}
 
 		AfkRecapItemPresentation.Display items = itemPresentation.get(recap);
+		if (!items.getNotableRows().isEmpty())
+		{
+			xpRows.add(new JLabel("Notable drops"));
+			for (AfkRecapItemPresentation.ItemRow item : items.getNotableRows())
+			{
+				JPanel row = new JPanel(new BorderLayout(6, 0));
+				row.setOpaque(false);
+				row.add(new JLabel(item.getName()), BorderLayout.CENTER);
+				row.add(new JLabel(item.getQuantityAndValue()), BorderLayout.EAST);
+				xpRows.add(row);
+			}
+		}
+
 		if (!items.getRows().isEmpty())
 		{
 			JLabel itemHeading = new JLabel("Items gained");

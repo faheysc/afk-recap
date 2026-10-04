@@ -69,6 +69,16 @@ public final class AfkRecapOverlay extends OverlayPanel
 				.left("Damage taken:").right(recap.getDamageTaken()).build());
 		}
 
+		if (!recap.getNotableDropRows().isEmpty())
+		{
+			panelComponent.getChildren().add(TitleComponent.builder().text("Notable drops").build());
+			for (AfkRecapItemPresentation.ItemRow row : recap.getNotableDropRows())
+			{
+				panelComponent.getChildren().add(LineComponent.builder()
+					.left(row.getName()).right(row.getQuantityAndValue()).build());
+			}
+		}
+
 		if (!recap.getItemRows().isEmpty())
 		{
 			panelComponent.getChildren().add(TitleComponent.builder().text("Items gained").build());

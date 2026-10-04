@@ -21,6 +21,10 @@ input; it does not send game inputs or automate gameplay.
   inventory gains for open fish barrels, fish sack barrels, log baskets, and
   forestry baskets. Supported direct-to-log-basket gains, including with felling
   axes, appear in the same item rows as normal inventory gains.
+- **Notable ground drops:** separately record local-player-owned ground drops worth
+  at least the configured GE value (100,000 gp by default), plus clue scrolls by
+  default. Picking up a drop can intentionally show it in both Notable drops and
+  Items gained. Drops alone do not qualify an idle candidate.
 - **Combat metrics:** attributed NPC kill counts, cumulative Prayer points used,
   and cumulative damage taken by the local player. Restoration and healing do not
   reduce these totals. These metrics alone do not qualify an idle candidate.
@@ -46,6 +50,11 @@ baselines prevent synchronization gains or data carrying over between worlds.
   other unsupported special cases are omitted rather than guessed. Charged
   infernal-tool hidden gains are excluded; felling ration/XP-only messages do not
   create logs.
+- Ground-drop attribution requires explicit local-player ownership. Unowned,
+  other-player, and group-owned piles are omitted; uncertain loot and additions to
+  piles that predate the session may be missed. Ownership identifies the owner,
+  not the source, so server-marked self-owned manual drops may also be included.
+  Values are approximate RuneLite prices, not sale guarantees.
 - Inventory gains count positive quantity changes. Recognized container transfers
   are suppressed, and Check-dialog contents never create gains, but other transfers
   into inventory can appear as gains. Delayed events or overlapping transfers and

@@ -24,6 +24,7 @@ public final class AfkRecapSession
 	private final Map<Skill, Long> xpGained;
 	private final Set<Skill> relevantIdleSkills;
 	private final Map<Integer, Integer> itemGains;
+	private final Map<Integer, Integer> notableDrops;
 	private final Map<String, Integer> npcKills;
 	private final long prayerUsed;
 	private final long damageTaken;
@@ -67,6 +68,25 @@ public final class AfkRecapSession
 		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
 		Map<String, Integer> npcKills, long prayerUsed, long damageTaken, AfkSessionEndReason endReason)
 	{
+		this(trigger, startGameTick, startTimestamp, endGameTick, endTimestamp, elapsedMillis,
+			xpGained, relevantIdleSkills, itemGains, npcKills, prayerUsed, damageTaken, endReason, Collections.emptyMap());
+	}
+
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
+		long endGameTick, Instant endTimestamp, long elapsedMillis,
+		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
+		Map<String, Integer> npcKills, long prayerUsed, long damageTaken, AfkSessionEndReason endReason,
+		Map<Integer, Integer> notableDrops)
+	{
+		Map<Integer, Integer> drops = new TreeMap<>();
+		notableDrops.forEach((id, quantity) ->
+		{
+			if (id >= 0 && quantity > 0)
+			{
+				drops.put(id, quantity);
+			}
+		});
+		this.notableDrops = Collections.unmodifiableMap(drops);
 		this.endReason = endReason;
 		this.damageTaken = Math.max(0, damageTaken);
 		Map<String, Integer> kills = new TreeMap<>();
@@ -111,7 +131,7 @@ public final class AfkRecapSession
 
 	public boolean hasGains()
 	{
-		return !xpGained.isEmpty() || !itemGains.isEmpty() || !npcKills.isEmpty() || prayerUsed > 0 || damageTaken > 0;
+		return !notableDrops.isEmpty() || !xpGained.isEmpty() || !itemGains.isEmpty() || !npcKills.isEmpty() || prayerUsed > 0 || damageTaken > 0;
 	}
 
 	public long getElapsedGameTicks()

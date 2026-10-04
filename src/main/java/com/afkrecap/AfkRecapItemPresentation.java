@@ -20,7 +20,7 @@ import net.runelite.client.game.ItemManager;
 @Slf4j
 public final class AfkRecapItemPresentation
 {
-	private static final Display EMPTY = new Display(Collections.emptyList(), null);
+	private static final Display EMPTY = new Display(Collections.emptyList(), null, Collections.emptyList());
 	private final IntFunction<ItemDetails> lookup;
 	// Values never reference the key: presentations live only as long as history/overlay need them.
 	private final Map<AfkRecapSession, Display> cache = new WeakHashMap<>();
@@ -56,7 +56,7 @@ public final class AfkRecapItemPresentation
 
 	synchronized Display prepare(AfkRecapSession recap)
 	{
-		if (recap.getItemGains().isEmpty())
+		if (recap.getItemGains().isEmpty() && recap.getNotableDrops().isEmpty())
 		{
 			return EMPTY;
 		}
@@ -65,10 +65,19 @@ public final class AfkRecapItemPresentation
 		{
 			return cached;
 		}
+		Display items = format(recap.getItemGains());
+		Display drops = format(recap.getNotableDrops());
+		Display display = new Display(items.rows, items.totalValue, drops.rows);
+		cache.put(recap, display);
+		return display;
+	}
+
+	private Display format(Map<Integer, Integer> gains)
+	{
 		List<ItemRow> rows = new ArrayList<>();
 		BigInteger total = BigInteger.ZERO;
 		boolean priced = false;
-		for (Map.Entry<Integer, Integer> entry : recap.getItemGains().entrySet())
+		for (Map.Entry<Integer, Integer> entry : gains.entrySet())
 		{
 			int id = entry.getKey();
 			ItemDetails details;
@@ -97,9 +106,7 @@ public final class AfkRecapItemPresentation
 			}
 			rows.add(new ItemRow(name, String.format(Locale.US, "%,d", entry.getValue()), value));
 		}
-		Display display = new Display(rows, priced ? gp(total) : null);
-		cache.put(recap, display);
-		return display;
+		return new Display(rows, priced ? gp(total) : null, Collections.emptyList());
 	}
 
 	synchronized Display get(AfkRecapSession recap)
@@ -134,11 +141,13 @@ public final class AfkRecapItemPresentation
 	{
 		private final List<ItemRow> rows;
 		private final String totalValue;
+		private final List<ItemRow> notableRows;
 
-		private Display(List<ItemRow> rows, String totalValue)
+		private Display(List<ItemRow> rows, String totalValue, List<ItemRow> notableRows)
 		{
 			this.rows = Collections.unmodifiableList(new ArrayList<>(rows));
 			this.totalValue = totalValue;
+			this.notableRows = Collections.unmodifiableList(new ArrayList<>(notableRows));
 		}
 	}
 
