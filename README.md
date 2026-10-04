@@ -6,11 +6,14 @@ or manual-input inactivity sessions.
 - Focus sessions start when RuneLite loses focus and finish when focus returns.
 - Idle candidates start after the configured number of game ticks without a mouse
   press or key press. Mouse movement does not reset inactivity.
-- Fishing, Mining, Woodcutting, Sailing, and Combat XP can make an idle candidate
+- Fishing, Mining, Woodcutting, Sailing, Combat, and Slayer XP can make an idle candidate
   relevant. Each activity has an enabled-by-default toggle. Qualifying XP can arrive
   at any point during the candidate; earlier inventory gains remain included.
-  Combat qualifies through Attack, Strength, Defence, Ranged, Magic, Hitpoints, or
-  Slayer XP; being on a Slayer task is not required.
+  Combat qualifies through Attack, Strength, Defence, Ranged, Magic, or Hitpoints XP.
+  Slayer qualifies only through Slayer XP, using an independent toggle. Both default
+  to enabled. Disabling either affects only idle relevance, not collection: all XP,
+  items, kills, Prayer usage, and damage collected before relevance remain available
+  if an enabled activity later qualifies the candidate. Focus sessions are unaffected.
 - Completed relevant recaps appear in a transient overlay and an optional sidebar
   with bounded, in-memory history and a Clear History button.
 - Inventory gains count positive quantity changes across all inventory slots.
@@ -67,4 +70,8 @@ The legacy `away-recap` config group is intentionally retained so the AFK Recap
 rename preserves existing saved settings. Recap history is not stored in config.
 
 The Combat toggle retains the legacy `idleSlayer` config key so existing saved
-preferences carry over to the expanded activity category.
+preferences remain intact. The new Slayer toggle uses `idleSlayerActivity`. When
+RuneLite initializes plugin/profile defaults, an absent Slayer setting inherits the
+existing Combat setting once (including saved opt-outs). Explicit Slayer settings
+are never overwritten; after initialization the toggles are independent. Fresh
+installations enable both.

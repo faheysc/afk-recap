@@ -58,11 +58,12 @@ public class IdleCombatSkillTest
 	}
 
 	@Test
-	public void disabledCombatDoesNotQualifyViaThisSkill()
+	public void disabledCombatAndSlayerDoNotQualifyViaThisSkill()
 	{
 		AfkRecapConfig disabled = new AfkRecapConfig()
 		{
 			@Override public boolean idleCombat() { return false; }
+			@Override public boolean idleSlayer() { return false; }
 		};
 		List<AfkRecapSession> recaps = new ArrayList<>();
 		AfkSessionManager manager = new AfkSessionManager(() -> 0L, () -> Instant.EPOCH, recaps::add);

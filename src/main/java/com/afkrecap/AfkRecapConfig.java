@@ -53,33 +53,41 @@ public interface AfkRecapConfig extends Config
 	}
 
 	// Retain the former Slayer key so saved opt-outs carry over to Combat.
-	@ConfigItem(keyName = "idleSlayer", name = "Idle Combat", description = "Attack, Strength, Defence, Ranged, Magic, Hitpoints, or Slayer XP makes an idle session relevant", position = 7)
+	@ConfigItem(keyName = "idleSlayer", name = "Idle Combat", description = "Attack, Strength, Defence, Ranged, Magic, or Hitpoints XP makes an idle session relevant", position = 7)
 	default boolean idleCombat()
 	{
 		return true;
 	}
 
-	@ConfigItem(keyName = "showOverlay", name = "Show recap overlay", description = "Show completed recaps in a temporary overlay; collection and debug logging continue when disabled", position = 8)
+	@ConfigItem(keyName = "idleSlayerActivity", name = "Idle Slayer", description = "Slayer XP makes an idle session relevant independently of Combat", position = 8)
+	default boolean idleSlayer()
+	{
+		// RuneLite persists absent defaults when loading plugin/profile configuration.
+		// Seed the split from the legacy combined preference once; saved values override this.
+		return idleCombat();
+	}
+
+	@ConfigItem(keyName = "showOverlay", name = "Show recap overlay", description = "Show completed recaps in a temporary overlay; collection and debug logging continue when disabled", position = 9)
 	default boolean showOverlay()
 	{
 		return true;
 	}
 
 	@Range(min = 3, max = 60)
-	@ConfigItem(keyName = "overlayDurationSeconds", name = "Overlay duration", description = "Seconds to display each completed recap (applies to the next recap)", position = 9)
+	@ConfigItem(keyName = "overlayDurationSeconds", name = "Overlay duration", description = "Seconds to display each completed recap (applies to the next recap)", position = 10)
 	default int overlayDurationSeconds()
 	{
 		return 10;
 	}
 
-	@ConfigItem(keyName = "enableSidePanel", name = "Enable side panel", description = "Show recent recaps in the sidebar; history continues collecting when disabled", position = 10)
+	@ConfigItem(keyName = "enableSidePanel", name = "Enable side panel", description = "Show recent recaps in the sidebar; history continues collecting when disabled", position = 11)
 	default boolean enableSidePanel()
 	{
 		return true;
 	}
 
 	@Range(min = 1, max = 100)
-	@ConfigItem(keyName = "recentRecapLimit", name = "Recent recap limit", description = "Maximum recent recaps retained in memory; reducing this trims history immediately", position = 11)
+	@ConfigItem(keyName = "recentRecapLimit", name = "Recent recap limit", description = "Maximum recent recaps retained in memory; reducing this trims history immediately", position = 12)
 	default int recentRecapLimit()
 	{
 		return 20;

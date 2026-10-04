@@ -16,13 +16,14 @@ import static org.junit.Assert.*;
 public class IdleActivityTest
 {
 	private final Set<Skill> combatSkills = EnumSet.of(Skill.ATTACK, Skill.STRENGTH, Skill.DEFENCE,
-		Skill.RANGED, Skill.MAGIC, Skill.HITPOINTS, Skill.SLAYER);
+		Skill.RANGED, Skill.MAGIC, Skill.HITPOINTS);
 	private final AfkRecapConfig combatOnly = new AfkRecapConfig()
 	{
 		@Override public boolean idleFishing() { return false; }
 		@Override public boolean idleMining() { return false; }
 		@Override public boolean idleWoodcutting() { return false; }
 		@Override public boolean idleSailing() { return false; }
+		@Override public boolean idleSlayer() { return false; }
 	};
 
 	private void ticks(AfkSessionManager manager, AfkRecapConfig config)

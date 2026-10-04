@@ -185,11 +185,11 @@ public class AfkRecapInventoryTest
 	}
 
 	@Test
-	public void disabledCombatDoesNotQualifyViaSlayer()
+	public void disabledSlayerDoesNotQualifyViaSlayer()
 	{
 		AfkRecapConfig disabled = new AfkRecapConfig()
 		{
-			@Override public boolean idleCombat() { return false; }
+			@Override public boolean idleSlayer() { return false; }
 		};
 		assertFalse(IdleActivity.enabledSkills(disabled).contains(Skill.SLAYER));
 		ticks(10, disabled);

@@ -14,7 +14,8 @@ enum IdleActivity
 	WOODCUTTING(AfkRecapConfig::idleWoodcutting, Skill.WOODCUTTING),
 	SAILING(AfkRecapConfig::idleSailing, Skill.SAILING),
 	COMBAT(AfkRecapConfig::idleCombat, Skill.ATTACK, Skill.STRENGTH, Skill.DEFENCE,
-		Skill.RANGED, Skill.MAGIC, Skill.HITPOINTS, Skill.SLAYER);
+		Skill.RANGED, Skill.MAGIC, Skill.HITPOINTS),
+	SLAYER(AfkRecapConfig::idleSlayer, Skill.SLAYER);
 
 	private final Set<Skill> skills;
 	private final Predicate<AfkRecapConfig> enabled;
