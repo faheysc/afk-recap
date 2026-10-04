@@ -1,6 +1,7 @@
 # AFK Recap hardening review
 
 Review of the committed checkpoint and low-risk changes, 2026-10-04.
+Packaging/readme readiness notes were updated during initial submission preparation.
 This is a source/API review with automated tests, not a gameplay profiler or a
 Plugin Hub approval. No new gameplay features or commits were introduced.
 
@@ -110,10 +111,11 @@ and [Jagex guidelines](https://secure.runescape.com/m=news/third-party-client-gu
   not proof of Hub CI resolution. No dependency change was warranted in this task.
 - Package/project/group/main class are renamed. Metadata names the correct plugin
   class; displayName/build are populated; blank version is allowed by the Hub guide.
-  author=Nobody remains a placeholder and tags are blank. The description mentions
-  focus but omits verified idle behavior. No ownership/identity values were invented.
-- No tracked LICENSE file exists. Adding an owner-approved permissive license and
-  filling author metadata are submission blockers. Neither was guessed in this review.
+  Initial submission preparation sets author to faheysc and fills the requested
+  tags and description, covering AFK/away sessions. PluginDescriptor matches that
+  description. The owner supplied the metadata explicitly.
+- Initial submission preparation adds a BSD 2-Clause LICENSE with copyright
+  (c) 2026, faheysc. The original licensing/author submission blockers are resolved.
 - away-recap and idleSlayer are deliberately retained for existing settings; no config
   group/key changed. No extra config permissions or persistence were introduced.
 - README's obsolete claim that chat parsing was absent was corrected. Added the
@@ -121,14 +123,14 @@ and [Jagex guidelines](https://secure.runescape.com/m=news/third-party-client-gu
   shared-kill attribution, unsupported/ambiguous hidden cases, transfer/window
   limitations, and observational-only behavior.
 
-Assessment: technically suitable for a Plugin Hub submission review after licensing,
-author metadata and manual hardening regression checks are resolved. Not submission
-ready as currently packaged. RuneLite reviewers make the final rule-compliance
-judgment; this source review does not constitute their approval.
+Assessment: metadata and licensing are now suitable for an initial Plugin Hub
+submission review. Manual verification limitations remain documented in README.
+RuneLite reviewers make the final rule-compliance judgment; this source review
+does not constitute their approval.
 
-## Validation
+## Hardening checkpoint validation
 
-- `JAVA_HOME=/var/home/sfahey/.jdks/temurin-11.0.32.1 ./gradlew clean test build`
+- `JAVA_HOME=<Java 11 installation> ./gradlew clean test build`
   passed: 192 tests, zero failures/errors/skips. All 188 checkpoint tests were
   retained; four new tests and one strengthened existing cache test were included.
 - `git diff --check` passed. The build reported the existing development-entry-point
@@ -137,3 +139,9 @@ judgment; this source review does not constitute their approval.
   invalidation, sustained unmatched acquisition evidence, and kill-count saturation.
   Existing presentation-cache test now also verifies repeated prepare avoids lookup.
 - No architecture rewrite, arbitrary total truncation, cargo tracking or new feature.
+
+## Initial submission preparation validation
+
+- Java 11 `clean test build` passed: 207 tests, zero failures/errors/skips.
+- `git diff --check` passed. Only metadata, license, documentation and the matching
+  PluginDescriptor description changed; no gameplay behavior changed.

@@ -51,7 +51,7 @@ import net.runelite.client.plugins.PluginDescriptor;
 @Slf4j
 @PluginDescriptor(
 	name = "AFK Recap",
-	description = "Records relevant events while RuneLite is unfocused and summarizes them when the player returns."
+	description = "Tracks what happens while you are AFK or away from RuneLite and summarizes XP, items, combat activity, and other session data when you return."
 )
 public class AfkRecapPlugin extends Plugin
 {

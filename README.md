@@ -1,77 +1,52 @@
 # AFK Recap
 
-A RuneLite plugin that summarizes XP and inventory items gained during focus-loss
-or manual-input inactivity sessions.
+AFK Recap tracks what happens while you are AFK or away from RuneLite and
+summarizes your session when you return. It only observes game events and user
+input; it does not send game inputs or automate gameplay.
 
-- Focus sessions start when RuneLite loses focus and finish when focus returns.
-- Idle candidates start after the configured number of game ticks without a mouse
-  press or key press. Mouse movement does not reset inactivity.
-- Fishing, Mining, Woodcutting, Sailing, Combat, and Slayer XP can make an idle candidate
-  relevant. Each activity has an enabled-by-default toggle. Qualifying XP can arrive
-  at any point during the candidate; earlier inventory gains remain included.
-  Combat qualifies through Attack, Strength, Defence, Ranged, Magic, or Hitpoints XP.
-  Slayer qualifies only through Slayer XP, using an independent toggle. Both default
-  to enabled. Disabling either affects only idle relevance, not collection: all XP,
-  items, kills, Prayer usage, and damage collected before relevance remain available
-  if an enabled activity later qualifies the candidate. Focus sessions are unaffected.
-- Completed relevant recaps appear in a transient overlay and an optional sidebar
-  with bounded, in-memory history and a Clear History button.
-- Inventory gains count positive quantity changes across all inventory slots.
-  Items present at session start are excluded. Item names and approximate values
-  use RuneLite ItemManager data; unpriced items still show their quantities.
+## Features
 
-- Combat recaps can include attributed NPC kills, cumulative Prayer points used,
-  and cumulative local-player damage taken. Restoration/healing does not subtract
-  from usage or damage totals. These metrics do not independently qualify idle candidates.
-- Confirmed, resource-specific catch/chop messages reconcile with inventory gains
-  for open fish barrels, fish sack barrels, log baskets, and forestry baskets.
-  Supported direct-to-storage gains use the same item rows as inventory gains.
-- Login, logout, reconnects, and world hops discard unfinished sessions and reset
-  transient baselines; login XP synchronization is not counted as a gain.
+- **Focus-loss sessions:** start when RuneLite loses focus and finish when focus returns.
+- **Configurable idle sessions:** start after the configured number of game ticks
+  without a mouse press or key press and finish on the next press. Mouse movement
+  does not reset inactivity.
+- **Independent activity toggles:** Fishing, Mining, Woodcutting, Sailing, Combat,
+  and Slayer XP can qualify an idle candidate. All are enabled by default for new
+  installations. Combat uses Attack, Strength, Defence, Ranged, Magic, or Hitpoints
+  XP; Slayer uses only Slayer XP.
+- **XP and item/resource gains:** collect gains throughout the candidate, including
+  before an enabled activity makes it relevant. Activity toggles only affect idle
+  relevance; they do not filter collected data or affect focus sessions.
+- **Hidden resource tracking:** confirmed catch/chop messages reconcile with
+  inventory gains for open fish barrels, fish sack barrels, log baskets, and
+  forestry baskets. Supported direct-to-log-basket gains, including with felling
+  axes, appear in the same item rows as normal inventory gains.
+- **Combat metrics:** attributed NPC kill counts, cumulative Prayer points used,
+  and cumulative damage taken by the local player. Restoration and healing do not
+  reduce these totals. These metrics alone do not qualify an idle candidate.
+- **Recap presentation:** a transient overlay and an optional recent-recap side
+  panel with Clear History. History defaults to 20 entries, is capped at 100, and
+  is not saved across client restarts. Items show quantities and approximate values
+  where available.
 
-## Tracking limitations
+Login, logout, reconnects, and world hops discard unfinished sessions and reset
+baselines so login XP synchronization is not counted as a gain.
 
-- Fish barrel and fish sack barrel tracking has not yet been manually verified.
-  Hidden log-basket gains have been manually verified.
-- Sailing XP is supported, but crewmate salvage item-type/quantity tracking is deferred.
+## Known limitations
+
+- Fish-barrel and fish-sack-barrel behavior is covered by automated tests but has
+  not been manually verified. Hidden log-basket gains have been manually verified.
+- Sailing XP is tracked, but crewmate salvage item types and quantities are not.
   Ship cargo additions do not contribute to item totals.
-- Kill attribution uses local-player-owned damage hitsplats and excludes NPCs with
-  observed damage from other players during the session. Shared kills and kills
-  without sufficient visible hitsplat evidence may be conservatively undercounted.
-- Hidden resources require a supported, explicit acquisition message and known item
-  type. Ambiguous messages, unknown resources, cormorant catches, and other unsupported
-  special cases are omitted. Charged infernal-tool hidden gains remain excluded.
-  Felling ration/XP-only messages do not create logs.
-- Reconciliation matches inventory additions in the same or adjacent game tick.
-  Transfer suppression covers nearby Fill/Empty/deposit/withdrawal events; ambiguous
-  overlap with gathering can undercount, and unusually delayed events are not guaranteed
-  to reconcile accurately. Check-dialog contents never create acquisitions.
-- General inventory tracking counts positive deltas, not provenance. Outside the
-  recognized resource-container transfer paths, withdrawals or other transfers into
-  inventory can appear as gains.
-- History is memory-only, capped at 100 recaps (20 by default); no permanent storage,
-  bank/ground-item loot collection, or generic cargo tracking is implemented.
+- Shared or uncertain NPC kills may be conservatively undercounted when visible
+  damage evidence is insufficient or includes another player's damage.
+- Ambiguous hidden-resource messages, unknown item types, cormorant catches, and
+  other unsupported special cases are omitted rather than guessed. Charged
+  infernal-tool hidden gains are excluded; felling ration/XP-only messages do not
+  create logs.
+- Inventory gains count positive quantity changes. Recognized container transfers
+  are suppressed, and Check-dialog contents never create gains, but other transfers
+  into inventory can appear as gains. Delayed events or overlapping transfers and
+  gathering may not reconcile accurately.
 
-The plugin only observes game events and user input; it does not send game inputs,
-change menu actions, or perform gameplay automation.
-
-## Development
-
-```sh
-JAVA_HOME=/var/home/sfahey/.jdks/temurin-11.0.32.1 ./gradlew test build
-JAVA_HOME=/var/home/sfahey/.jdks/temurin-11.0.32.1 ./gradlew run
-```
-
-For development-client login, follow RuneLite's
-[Using Jagex Accounts](https://github.com/runelite/runelite/wiki/Using-Jagex-Accounts)
-instructions. Plugin behavior must be verified manually in RuneLite.
-
-The legacy `away-recap` config group is intentionally retained so the AFK Recap
-rename preserves existing saved settings. Recap history is not stored in config.
-
-The Combat toggle retains the legacy `idleSlayer` config key so existing saved
-preferences remain intact. The new Slayer toggle uses `idleSlayerActivity`. When
-RuneLite initializes plugin/profile defaults, an absent Slayer setting inherits the
-existing Combat setting once (including saved opt-outs). Explicit Slayer settings
-are never overwritten; after initialization the toggles are independent. Fresh
-installations enable both.
+Licensed under the [BSD 2-Clause License](LICENSE).
