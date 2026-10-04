@@ -219,6 +219,16 @@ public class AfkRecapCombatTest
 		assertEquals(5, end().getPrayerUsed());
 	}
 
+	@Test public void killTotalSaturatesRatherThanBecomingNegative()
+	{
+		NpcKillTracker tracker = new NpcKillTracker();
+		tracker.totals().put("Cow", Integer.MAX_VALUE);
+		Object npc = new Object();
+		tracker.damage(npc, 1, true, false);
+		tracker.death(npc, "Cow");
+		assertEquals(Integer.valueOf(Integer.MAX_VALUE), tracker.totals().get("Cow"));
+	}
+
 	@Test public void panelShowsMetricsAndOmitsEmptySections() throws Exception
 	{
 		start();

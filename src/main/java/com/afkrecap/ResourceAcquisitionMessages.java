@@ -24,6 +24,13 @@ final class ResourceAcquisitionMessages
 	{
 	}
 
+	/** Cheap prefilter only; the exact parser still decides whether an item can be credited. */
+	static boolean mayAcquire(String message)
+	{
+		return message != null && (message.startsWith("You catch ") || message.startsWith("You get ")
+			|| bonus(message) != null);
+	}
+
 	static boolean acceptsChat(Family family, ChatMessageType type)
 	{
 		return type == ChatMessageType.SPAM || (family == Family.LOG

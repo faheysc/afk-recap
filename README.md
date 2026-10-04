@@ -17,9 +17,40 @@ or manual-input inactivity sessions.
   Items present at session start are excluded. Item names and approximate values
   use RuneLite ItemManager data; unpriced items still show their quantities.
 
-No bank, ground-item, or NPC loot tracking, chat parsing, or permanent storage is
-implemented. XP accounting, overlay expiry, and session re-arming remain shared
-across supported activities.
+- Combat recaps can include attributed NPC kills, cumulative Prayer points used,
+  and cumulative local-player damage taken. Restoration/healing does not subtract
+  from usage or damage totals. These metrics do not independently qualify idle candidates.
+- Confirmed, resource-specific catch/chop messages reconcile with inventory gains
+  for open fish barrels, fish sack barrels, log baskets, and forestry baskets.
+  Supported direct-to-storage gains use the same item rows as inventory gains.
+- Login, logout, reconnects, and world hops discard unfinished sessions and reset
+  transient baselines; login XP synchronization is not counted as a gain.
+
+## Tracking limitations
+
+- Fish barrel and fish sack barrel tracking has not yet been manually verified.
+  Hidden log-basket gains have been manually verified.
+- Sailing XP is supported, but crewmate salvage item-type/quantity tracking is deferred.
+  Ship cargo additions do not contribute to item totals.
+- Kill attribution uses local-player-owned damage hitsplats and excludes NPCs with
+  observed damage from other players during the session. Shared kills and kills
+  without sufficient visible hitsplat evidence may be conservatively undercounted.
+- Hidden resources require a supported, explicit acquisition message and known item
+  type. Ambiguous messages, unknown resources, cormorant catches, and other unsupported
+  special cases are omitted. Charged infernal-tool hidden gains remain excluded.
+  Felling ration/XP-only messages do not create logs.
+- Reconciliation matches inventory additions in the same or adjacent game tick.
+  Transfer suppression covers nearby Fill/Empty/deposit/withdrawal events; ambiguous
+  overlap with gathering can undercount, and unusually delayed events are not guaranteed
+  to reconcile accurately. Check-dialog contents never create acquisitions.
+- General inventory tracking counts positive deltas, not provenance. Outside the
+  recognized resource-container transfer paths, withdrawals or other transfers into
+  inventory can appear as gains.
+- History is memory-only, capped at 100 recaps (20 by default); no permanent storage,
+  bank/ground-item loot collection, or generic cargo tracking is implemented.
+
+The plugin only observes game events and user input; it does not send game inputs,
+change menu actions, or perform gameplay automation.
 
 ## Development
 

@@ -60,6 +60,11 @@ public final class AfkRecapItemPresentation
 		{
 			return EMPTY;
 		}
+		Display cached = cache.get(recap);
+		if (cached != null)
+		{
+			return cached;
+		}
 		List<ItemRow> rows = new ArrayList<>();
 		BigInteger total = BigInteger.ZERO;
 		boolean priced = false;

@@ -111,11 +111,6 @@ final class AfkSessionManager
 		gameTicks++;
 		inactiveTicks = Math.min(100, inactiveTicks + 1);
 		int threshold = Math.max(1, Math.min(100, config.idleGameTicks()));
-		if (session == null)
-		{
-			log.debug("Idle detection progress: gameTick={}, inactiveTicks={}, threshold={}, enabled={}",
-				gameTicks, inactiveTicks, threshold, config.startOnIdle());
-		}
 		if (session == null && config.startOnIdle() && inactiveTicks >= threshold)
 		{
 			log.debug("Idle threshold reached: {} inactive game ticks (~{} ms)", inactiveTicks, inactiveTicks * 600L);
@@ -155,8 +150,6 @@ final class AfkSessionManager
 		}
 		// This same input begins the next inactivity period, even when it ends a session.
 		inactiveTicks = 0;
-		log.debug("Manual input reset inactivity: gameTick={}, inactiveTicks=0, activeTrigger={}",
-			gameTicks, trigger());
 	}
 
 	void statChanged(Skill skill, int xp)

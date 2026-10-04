@@ -112,4 +112,33 @@ public class ResourceAcquisitionTrackerTest
 		tracker.message("Rada's blessing enabled you to catch an extra fish.", true, false); total(ItemID.RAW_TROUT, 2);
 	}
 	@Test public void unrelatedItemsRemainNormal() { inventory(ItemID.COINS, 200); total(ItemID.COINS, 200); }
+	@Test public void cheapChatPrefilterPreservesAllSupportedAcquisitionsAndBonuses()
+	{
+		for (String message : new String[]{"You catch a trout.", "You get some oak logs.",
+			"You get an arctic pine log.", "Rada's blessing enabled you to catch an extra fish.",
+			"The spirit flakes enabled you to catch an extra fish.",
+			"Your Kandarin headgear provides you with an additional log.",
+			"The nature offerings enabled you to chop an extra log."})
+		{
+			assertTrue(ResourceAcquisitionMessages.mayAcquire(message));
+		}
+		assertFalse(ResourceAcquisitionMessages.mayAcquire(null));
+		assertFalse(ResourceAcquisitionMessages.mayAcquire("The basket contains 20 oak logs."));
+		assertFalse(ResourceAcquisitionMessages.mayAcquire("You empty your basket."));
+	}
+
+	@Test public void unrelatedChatStillInvalidatesBonusEvidence()
+	{
+		log(); tracker.message("The basket contains 20 oak logs.", false, false);
+		tracker.message("Your Kandarin headgear provides you with an additional log.", false, true);
+		total(ItemID.OAK_LOGS, 1);
+	}
+
+	@Test public void unmatchedMessagesDoNotRemainPendingAcrossManyTicks()
+	{
+		for (int i = 0; i < 1000; i++) { log(); tracker.gameTick(); }
+		settle(); inventory(ItemID.OAK_LOGS, 1);
+		total(ItemID.OAK_LOGS, 1001);
+	}
+
 }

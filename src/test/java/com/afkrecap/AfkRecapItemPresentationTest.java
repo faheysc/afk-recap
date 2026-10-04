@@ -119,6 +119,7 @@ public class AfkRecapItemPresentationTest
 		AfkRecapItemPresentation.Display display = presenter.prepare(recap);
 		assertSame(display, presenter.get(recap));
 		assertSame(display, presenter.get(recap));
+		assertSame(display, presenter.prepare(recap));
 		assertEquals(1, lookups.get());
 	}
 

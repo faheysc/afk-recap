@@ -31,7 +31,7 @@ final class NpcKillTracker
 		hit.dead = true;
 		if (hit.mine && !hit.others && name != null && !name.trim().isEmpty())
 		{
-			totals.merge(name, 1, Integer::sum);
+			totals.merge(name, 1, (count, added) -> count == Integer.MAX_VALUE ? count : count + added);
 		}
 	}
 

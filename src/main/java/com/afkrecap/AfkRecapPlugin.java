@@ -178,7 +178,7 @@ public class AfkRecapPlugin extends Plugin
 		keyManager.unregisterKeyListener(keyListener);
 		if (stopped != null)
 		{
-			clientThread.invoke(() -> stopped.reset("plugin shutdown"));
+			clientThread.invoke(stopped::suspend);
 		}
 	}
 
@@ -243,7 +243,7 @@ public class AfkRecapPlugin extends Plugin
 	public void onHitsplatApplied(HitsplatApplied event)
 	{
 		AfkSessionManager current = sessions;
-		if (current != null && client.getGameState() == GameState.LOGGED_IN)
+		if (current != null && current.trigger() != null && client.getGameState() == GameState.LOGGED_IN)
 		{
 			Hitsplat hit = event.getHitsplat();
 			if (event.getActor() != null && event.getActor() == client.getLocalPlayer())
@@ -261,7 +261,7 @@ public class AfkRecapPlugin extends Plugin
 	public void onActorDeath(ActorDeath event)
 	{
 		AfkSessionManager current = sessions;
-		if (current != null && client.getGameState() == GameState.LOGGED_IN
+		if (current != null && current.trigger() != null && client.getGameState() == GameState.LOGGED_IN
 			&& event.getActor() instanceof NPC)
 		{
 			current.npcDeath(event.getActor(), event.getActor().getName());
@@ -272,7 +272,7 @@ public class AfkRecapPlugin extends Plugin
 	public void onNpcDespawned(NpcDespawned event)
 	{
 		AfkSessionManager current = sessions;
-		if (current != null)
+		if (current != null && current.trigger() != null)
 		{
 			current.npcDespawned(event.getNpc());
 		}
@@ -282,7 +282,7 @@ public class AfkRecapPlugin extends Plugin
 	public void onItemContainerChanged(ItemContainerChanged event)
 	{
 		AfkSessionManager current = sessions;
-		if (current != null && client.getGameState() == GameState.LOGGED_IN
+		if (current != null && current.trigger() != null && client.getGameState() == GameState.LOGGED_IN
 			&& event.getContainerId() == InventoryID.INV)
 		{
 			ItemContainer inventory = event.getItemContainer();
@@ -294,7 +294,11 @@ public class AfkRecapPlugin extends Plugin
 	public void onChatMessage(ChatMessage event)
 	{
 		AfkSessionManager current = sessions;
-		if (current == null || client.getGameState() != GameState.LOGGED_IN || !current.isReady())
+		if (current == null || current.trigger() == null || client.getGameState() != GameState.LOGGED_IN || !current.isReady())
+		{
+			return;
+		}
+		if (!ResourceAcquisitionMessages.acceptsChat(Family.LOG, event.getType()) || event.getMessage() == null)
 		{
 			return;
 		}
@@ -316,20 +320,27 @@ public class AfkRecapPlugin extends Plugin
 					break;
 			}
 		}
-		if (ResourceAcquisitionMessages.acceptsChat(Family.LOG, event.getType()))
+		if (!ResourceAcquisitionMessages.mayAcquire(message))
 		{
-			ResourceContainerState storage = resourceContainerState();
-			current.acquisitionMessage(message,
-				ResourceAcquisitionMessages.acceptsChat(Family.FISH, event.getType()) && storage.hiddenFish(),
-				storage.hiddenLogs());
+			// Preserve bonus-context invalidation without inspecting inventory/equipment.
+			current.acquisitionMessage(message, false, false);
+			return;
 		}
+		ResourceContainerState storage = resourceContainerState();
+		current.acquisitionMessage(message,
+			ResourceAcquisitionMessages.acceptsChat(Family.FISH, event.getType()) && storage.hiddenFish(),
+			storage.hiddenLogs());
 	}
 
 	@Subscribe
 	public void onMenuOptionClicked(MenuOptionClicked event)
 	{
 		AfkSessionManager current = sessions;
-		if (current == null || client.getGameState() != GameState.LOGGED_IN || !current.isReady())
+		if (current == null || current.trigger() == null || client.getGameState() != GameState.LOGGED_IN || !current.isReady())
+		{
+			return;
+		}
+		if (event.getMenuOption() == null || event.getMenuAction() == null)
 		{
 			return;
 		}
