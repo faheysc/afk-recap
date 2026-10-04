@@ -102,7 +102,7 @@ public class AfkRecapInventoryTest
 	{
 		ticks(10, config);
 		gainItem(12);
-		manager.statChanged(Skill.HITPOINTS, 1012);
+		manager.statChanged(Skill.PRAYER, 1012);
 		manager.manualInput();
 		assertNull(manager.trigger());
 		assertTrue(recaps.isEmpty());
@@ -157,15 +157,15 @@ public class AfkRecapInventoryTest
 	public void sailingXpCanQualifyDelayedCandidateAndRetainsEarlierItems()
 	{
 		assertTrue(config.idleSailing());
-		assertTrue(IdleSkill.enabledSkills(config).contains(Skill.SAILING));
+		assertTrue(IdleActivity.enabledSkills(config).contains(Skill.SAILING));
 		assertDelayedSkillRelevance(Skill.SAILING);
 	}
 
 	@Test
 	public void slayerXpCanQualifyDelayedCandidateAndRetainsEarlierItems()
 	{
-		assertTrue(config.idleSlayer());
-		assertTrue(IdleSkill.enabledSkills(config).contains(Skill.SLAYER));
+		assertTrue(config.idleCombat());
+		assertTrue(IdleActivity.enabledSkills(config).contains(Skill.SLAYER));
 		assertDelayedSkillRelevance(Skill.SLAYER);
 	}
 
@@ -176,7 +176,7 @@ public class AfkRecapInventoryTest
 		{
 			@Override public boolean idleSailing() { return false; }
 		};
-		assertFalse(IdleSkill.enabledSkills(disabled).contains(Skill.SAILING));
+		assertFalse(IdleActivity.enabledSkills(disabled).contains(Skill.SAILING));
 		ticks(10, disabled);
 		gainItem(12);
 		manager.statChanged(Skill.SAILING, 1050);
@@ -185,13 +185,13 @@ public class AfkRecapInventoryTest
 	}
 
 	@Test
-	public void disabledSlayerDoesNotQualifyCandidate()
+	public void disabledCombatDoesNotQualifyViaSlayer()
 	{
 		AfkRecapConfig disabled = new AfkRecapConfig()
 		{
-			@Override public boolean idleSlayer() { return false; }
+			@Override public boolean idleCombat() { return false; }
 		};
-		assertFalse(IdleSkill.enabledSkills(disabled).contains(Skill.SLAYER));
+		assertFalse(IdleActivity.enabledSkills(disabled).contains(Skill.SLAYER));
 		ticks(10, disabled);
 		gainItem(12);
 		manager.statChanged(Skill.SLAYER, 1050);

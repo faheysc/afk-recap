@@ -52,8 +52,9 @@ public interface AfkRecapConfig extends Config
 		return true;
 	}
 
-	@ConfigItem(keyName = "idleSlayer", name = "Idle Slayer", description = "Slayer XP makes an idle session relevant", position = 7)
-	default boolean idleSlayer()
+	// Retain the former Slayer key so saved opt-outs carry over to Combat.
+	@ConfigItem(keyName = "idleSlayer", name = "Idle Combat", description = "Attack, Strength, Defence, Ranged, Magic, Hitpoints, or Slayer XP makes an idle session relevant", position = 7)
+	default boolean idleCombat()
 	{
 		return true;
 	}

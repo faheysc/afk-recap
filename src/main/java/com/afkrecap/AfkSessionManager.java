@@ -69,7 +69,7 @@ final class AfkSessionManager
 		if (session == null && config.startOnIdle() && inactiveTicks >= threshold)
 		{
 			log.debug("Idle threshold reached: {} inactive game ticks (~{} ms)", inactiveTicks, inactiveTicks * 600L);
-			start(AfkSessionTrigger.IDLE, IdleSkill.enabledSkills(config));
+			start(AfkSessionTrigger.IDLE, IdleActivity.enabledSkills(config));
 		}
 	}
 

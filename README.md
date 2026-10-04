@@ -6,9 +6,11 @@ or manual-input inactivity sessions.
 - Focus sessions start when RuneLite loses focus and finish when focus returns.
 - Idle candidates start after the configured number of game ticks without a mouse
   press or key press. Mouse movement does not reset inactivity.
-- Fishing, Mining, Woodcutting, Sailing, and Slayer XP can make an idle candidate
-  relevant. Each skill has an enabled-by-default toggle. Qualifying XP can arrive
+- Fishing, Mining, Woodcutting, Sailing, and Combat XP can make an idle candidate
+  relevant. Each activity has an enabled-by-default toggle. Qualifying XP can arrive
   at any point during the candidate; earlier inventory gains remain included.
+  Combat qualifies through Attack, Strength, Defence, Ranged, Magic, Hitpoints, or
+  Slayer XP; being on a Slayer task is not required.
 - Completed relevant recaps appear in a transient overlay and an optional sidebar
   with bounded, in-memory history and a Clear History button.
 - Inventory gains count positive quantity changes across all inventory slots.
@@ -32,3 +34,6 @@ instructions. Plugin behavior must be verified manually in RuneLite.
 
 The legacy `away-recap` config group is intentionally retained so the AFK Recap
 rename preserves existing saved settings. Recap history is not stored in config.
+
+The Combat toggle retains the legacy `idleSlayer` config key so existing saved
+preferences carry over to the expanded activity category.

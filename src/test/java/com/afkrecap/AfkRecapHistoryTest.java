@@ -160,13 +160,13 @@ public class AfkRecapHistoryTest
 		AfkSessionManager manager = new AfkSessionManager(() -> 0L, () -> Instant.EPOCH, history::add);
 		Map<Skill, Integer> baseline = new EnumMap<>(Skill.class);
 		baseline.put(Skill.WOODCUTTING, 1000);
-		baseline.put(Skill.HITPOINTS, 1000);
+		baseline.put(Skill.PRAYER, 1000);
 		manager.baseline(baseline);
 		for (int i = 0; i < 10; i++)
 		{
 			manager.gameTick(config);
 		}
-		manager.statChanged(Skill.HITPOINTS, 1012);
+		manager.statChanged(Skill.PRAYER, 1012);
 		manager.manualInput();
 		assertTrue(history.snapshot().isEmpty());
 		manager.focusChanged(false, config);
@@ -182,7 +182,7 @@ public class AfkRecapHistoryTest
 		assertEquals(1, history.snapshot().size());
 		assertEquals(AfkSessionTrigger.IDLE, history.snapshot().get(0).getTrigger());
 		manager.focusChanged(false, config);
-		manager.statChanged(Skill.HITPOINTS, 1020);
+		manager.statChanged(Skill.PRAYER, 1020);
 		manager.focusChanged(true, config);
 		assertEquals(2, history.snapshot().size());
 		assertEquals(AfkSessionTrigger.FOCUS, history.snapshot().get(0).getTrigger());

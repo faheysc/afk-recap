@@ -182,7 +182,7 @@ public class AfkRecapCollectionTest
 	public void discardedIdleCandidateDoesNotEmitRecapEvenWithOtherXp()
 	{
 		startIdle();
-		manager.statChanged(Skill.HITPOINTS, 1012);
+		manager.statChanged(Skill.PRAYER, 1012);
 		manager.manualInput();
 		assertNull(manager.trigger());
 		assertTrue(recaps.isEmpty());
@@ -225,7 +225,7 @@ public class AfkRecapCollectionTest
 		assertEquals(epoch, recap.getStartTimestamp());
 		assertEquals(epoch.plusMillis(23300), recap.getEndTimestamp());
 		assertEquals(23300, recap.getElapsedMillis());
-		assertEquals(Collections.singleton(Skill.WOODCUTTING), recap.getRelevantIdleSkills());
+		assertEquals(java.util.EnumSet.of(Skill.WOODCUTTING, Skill.HITPOINTS), recap.getRelevantIdleSkills());
 		assertEquals(Long.valueOf(525), recap.getXpGained().get(Skill.WOODCUTTING));
 		assertEquals(Long.valueOf(12), recap.getXpGained().get(Skill.HITPOINTS));
 		String message = logs.list.stream().map(ILoggingEvent::getFormattedMessage)
