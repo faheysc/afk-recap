@@ -10,6 +10,11 @@ import javax.inject.Inject;
 import javax.swing.SwingUtilities;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Client;
+import net.runelite.api.NPC;
+import net.runelite.api.Hitsplat;
+import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.HitsplatApplied;
+import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.GameState;
 import net.runelite.api.ItemContainer;
 import net.runelite.api.Skill;
@@ -135,6 +140,7 @@ public class AfkRecapPlugin extends Plugin
 				refreshSidePanel();
 			}
 		}, this::inventorySnapshot);
+		started.suspend();
 		sessions = started;
 		clientThread.invoke(() ->
 		{
@@ -174,7 +180,7 @@ public class AfkRecapPlugin extends Plugin
 			clientThread.invoke(() ->
 			{
 				// Ignore callbacks belonging to a previous enable/disable cycle.
-				if (sessions == current)
+				if (sessions == current && client.getGameState() == GameState.LOGGED_IN)
 				{
 					current.manualInput();
 				}
@@ -187,7 +193,7 @@ public class AfkRecapPlugin extends Plugin
 	{
 		log.debug("RuneLite {} focus", event.isFocused() ? "gained" : "lost");
 		AfkSessionManager current = sessions;
-		if (current != null)
+		if (current != null && client.getGameState() == GameState.LOGGED_IN)
 		{
 			current.focusChanged(event.isFocused(), config);
 		}
@@ -199,6 +205,12 @@ public class AfkRecapPlugin extends Plugin
 		AfkSessionManager current = sessions;
 		if (current != null && client.getGameState() == GameState.LOGGED_IN)
 		{
+			if (!current.isReady())
+			{
+				// All login stat synchronization has been processed before this tick.
+				current.loggedIn(experienceSnapshot(), client.getBoostedSkillLevel(Skill.PRAYER));
+				return;
+			}
 			current.gameTick(config);
 		}
 	}
@@ -210,6 +222,49 @@ public class AfkRecapPlugin extends Plugin
 		if (current != null && client.getGameState() == GameState.LOGGED_IN)
 		{
 			current.statChanged(event.getSkill(), event.getXp());
+			if (event.getSkill() == Skill.PRAYER)
+			{
+				current.prayerChanged(event.getBoostedLevel());
+			}
+		}
+	}
+
+	@Subscribe
+	public void onHitsplatApplied(HitsplatApplied event)
+	{
+		AfkSessionManager current = sessions;
+		if (current != null && client.getGameState() == GameState.LOGGED_IN)
+		{
+			Hitsplat hit = event.getHitsplat();
+			if (event.getActor() != null && event.getActor() == client.getLocalPlayer())
+			{
+				current.playerHitsplat(hit);
+			}
+			else if (event.getActor() instanceof NPC && hit != null)
+			{
+				current.npcDamage(event.getActor(), hit.getAmount(), hit.isMine(), hit.isOthers());
+			}
+		}
+	}
+
+	@Subscribe
+	public void onActorDeath(ActorDeath event)
+	{
+		AfkSessionManager current = sessions;
+		if (current != null && client.getGameState() == GameState.LOGGED_IN
+			&& event.getActor() instanceof NPC)
+		{
+			current.npcDeath(event.getActor(), event.getActor().getName());
+		}
+	}
+
+	@Subscribe
+	public void onNpcDespawned(NpcDespawned event)
+	{
+		AfkSessionManager current = sessions;
+		if (current != null)
+		{
+			current.npcDespawned(event.getNpc());
 		}
 	}
 
@@ -239,9 +294,13 @@ public class AfkRecapPlugin extends Plugin
 	public void onGameStateChanged(GameStateChanged event)
 	{
 		AfkSessionManager current = sessions;
-		if (current != null && event.getGameState() == GameState.LOGGED_IN)
+		if (current != null)
 		{
-			baselineExperience(current);
+			current.gameStateChanged(event.getGameState());
+			if (event.getGameState() == GameState.LOGGED_IN)
+			{
+				baselineExperience(current);
+			}
 		}
 	}
 
@@ -312,11 +371,17 @@ public class AfkRecapPlugin extends Plugin
 
 	private void baselineExperience(AfkSessionManager current)
 	{
+		current.baseline(experienceSnapshot());
+		current.baselinePrayer(client.getBoostedSkillLevel(Skill.PRAYER));
+	}
+
+	private Map<Skill, Integer> experienceSnapshot()
+	{
 		Map<Skill, Integer> xp = new EnumMap<>(Skill.class);
 		for (Skill skill : Skill.values())
 		{
 			xp.put(skill, client.getSkillExperience(skill));
 		}
-		current.baseline(xp);
+		return xp;
 	}
 }

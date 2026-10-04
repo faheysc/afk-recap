@@ -51,6 +51,24 @@ public final class AfkRecapOverlay extends OverlayPanel
 			panelComponent.getChildren().add(LineComponent.builder()
 				.left(row.getSkill()).right(row.getGained()).build());
 		}
+		if (!recap.getNpcKills().isEmpty())
+		{
+			panelComponent.getChildren().add(TitleComponent.builder().text("Kills").build());
+			recap.getNpcKills().forEach((name, count) -> panelComponent.getChildren().add(
+				LineComponent.builder().left(name).right(count.toString()).build()));
+		}
+		if (recap.getPrayerUsed() != null)
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Prayer used:").right(recap.getPrayerUsed()).build());
+		}
+
+		if (recap.getDamageTaken() != null)
+		{
+			panelComponent.getChildren().add(LineComponent.builder()
+				.left("Damage taken:").right(recap.getDamageTaken()).build());
+		}
+
 		if (!recap.getItemRows().isEmpty())
 		{
 			panelComponent.getChildren().add(TitleComponent.builder().text("Items gained").build());

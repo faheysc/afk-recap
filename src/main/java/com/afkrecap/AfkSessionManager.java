@@ -11,6 +11,8 @@ import java.util.function.LongSupplier;
 import java.util.function.Supplier;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.Skill;
+import net.runelite.api.GameState;
+import net.runelite.api.Hitsplat;
 
 // All calls run on the client thread. No rendering or persistent storage belongs here.
 @Slf4j
@@ -24,6 +26,8 @@ final class AfkSessionManager
 	private long gameTicks;
 	private int inactiveTicks;
 	private Session session;
+	private Integer prayerPoints;
+	private boolean ready = true;
 
 	AfkSessionManager()
 	{
@@ -50,6 +54,44 @@ final class AfkSessionManager
 		this.recapConsumer = recapConsumer;
 	}
 
+	// Login, loading, hopping and reconnecting discard unfinished data without publishing it.
+	void suspend()
+	{
+		ready = false;
+		session = null;
+		inactiveTicks = 0;
+		experience.clear();
+		prayerPoints = null;
+	}
+
+	void gameStateChanged(GameState state)
+	{
+		// Even LOGGED_IN waits for the first stable game tick before accepting activity.
+		suspend();
+		log.debug("Recap collection suspended for game state {}", state);
+	}
+
+	void loggedIn(Map<Skill, Integer> xp, int prayer)
+	{
+		suspend();
+		baseline(xp);
+		baselinePrayer(prayer);
+		ready = true;
+	}
+
+	boolean isReady()
+	{
+		return ready;
+	}
+
+	void playerHitsplat(Hitsplat hit)
+	{
+		if (session != null && PlayerDamage.isDamage(hit))
+		{
+			session.damageTaken += hit.getAmount();
+		}
+	}
+
 	void baseline(Map<Skill, Integer> xp)
 	{
 		experience.clear();
@@ -58,6 +100,10 @@ final class AfkSessionManager
 
 	void gameTick(AfkRecapConfig config)
 	{
+		if (!ready)
+		{
+			return;
+		}
 		gameTicks++;
 		inactiveTicks = Math.min(100, inactiveTicks + 1);
 		int threshold = Math.max(1, Math.min(100, config.idleGameTicks()));
@@ -75,6 +121,10 @@ final class AfkSessionManager
 
 	void focusChanged(boolean focused, AfkRecapConfig config)
 	{
+		if (!ready)
+		{
+			return;
+		}
 		if (focused)
 		{
 			if (trigger() == AfkSessionTrigger.FOCUS)
@@ -91,6 +141,10 @@ final class AfkSessionManager
 
 	void manualInput()
 	{
+		if (!ready)
+		{
+			return;
+		}
 		if (trigger() == AfkSessionTrigger.IDLE)
 		{
 			end("manual input");
@@ -103,6 +157,10 @@ final class AfkSessionManager
 
 	void statChanged(Skill skill, int xp)
 	{
+		if (!ready)
+		{
+			return;
+		}
 		Integer previous = experience.put(skill, xp);
 		// A missing baseline is synchronization, not a gain. Decreases rebaseline only.
 		if (session == null || previous == null || xp <= previous)
@@ -115,6 +173,48 @@ final class AfkSessionManager
 			&& session.relevantSkills.add(skill))
 		{
 			log.debug("IDLE session enabled skill activity detected: {} (+{} XP)", skill, gained);
+		}
+	}
+
+	void baselinePrayer(int points)
+	{
+		prayerPoints = points;
+	}
+
+	void prayerChanged(int points)
+	{
+		if (!ready)
+		{
+			return;
+		}
+		if (session != null && prayerPoints != null && points < prayerPoints)
+		{
+			session.prayerUsed += (long) prayerPoints - points;
+		}
+		prayerPoints = points;
+	}
+
+	void npcDamage(Object npc, int amount, boolean mine, boolean others)
+	{
+		if (session != null)
+		{
+			session.kills.damage(npc, amount, mine, others);
+		}
+	}
+
+	void npcDeath(Object npc, String name)
+	{
+		if (session != null)
+		{
+			session.kills.death(npc, name);
+		}
+	}
+
+	void npcDespawned(Object npc)
+	{
+		if (session != null)
+		{
+			session.kills.despawn(npc);
 		}
 	}
 
@@ -134,6 +234,7 @@ final class AfkSessionManager
 		}
 		inactiveTicks = 0;
 		experience.clear();
+		prayerPoints = null;
 	}
 
 	AfkSessionTrigger trigger()
@@ -169,12 +270,13 @@ final class AfkSessionManager
 		log.debug("Away session ended: trigger={}, reason={}, outcome={}, skills={}, elapsedGameTicks={}, elapsedMs={}",
 			ended.trigger, reason, outcome, ended.relevantSkills, ticks, elapsedMillis);
 		Map<Integer, Integer> itemGains = ended.inventory.gains();
-		if ((!ended.xpGained.isEmpty() || !itemGains.isEmpty())
+		if ((!ended.xpGained.isEmpty() || !itemGains.isEmpty() || !ended.kills.totals().isEmpty()
+			|| ended.prayerUsed > 0 || ended.damageTaken > 0)
 			&& (ended.trigger == AfkSessionTrigger.FOCUS || !ended.relevantSkills.isEmpty()))
 		{
 			AfkRecapSession recap = new AfkRecapSession(ended.trigger, ended.startTick,
 				ended.startTimestamp, gameTicks, endTimestamp, elapsedMillis,
-				ended.xpGained, ended.relevantSkills, itemGains);
+				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken);
 			logRecap(recap);
 			// Hand off an immutable snapshot; no session history or permanent storage.
 			recapConsumer.accept(recap);
@@ -216,6 +318,9 @@ final class AfkSessionManager
 		private final Map<Skill, Long> xpGained = new EnumMap<>(Skill.class);
 		private final Set<Skill> enabledSkills;
 		private final InventoryGainTracker inventory;
+		private final NpcKillTracker kills = new NpcKillTracker();
+		private long prayerUsed;
+		private long damageTaken;
 		private final EnumSet<Skill> relevantSkills = EnumSet.noneOf(Skill.class);
 
 		private Session(AfkSessionTrigger trigger, long startTick, long startNanos,

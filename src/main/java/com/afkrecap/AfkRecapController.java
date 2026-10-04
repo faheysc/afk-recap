@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.function.LongSupplier;
 import javax.inject.Inject;
@@ -86,9 +87,15 @@ public final class AfkRecapController
 		private final List<XpRow> xpRows;
 		private final List<AfkRecapItemPresentation.ItemRow> itemRows;
 		private final String totalValue;
+		private final Map<String, Integer> npcKills;
+		private final String prayerUsed;
+		private final String damageTaken;
 
 		private Presentation(AfkRecapSession recap, AfkRecapItemPresentation.Display items)
 		{
+			damageTaken = recap.getDamageTaken() > 0 ? Long.toString(recap.getDamageTaken()) : null;
+			npcKills = recap.getNpcKills();
+			prayerUsed = recap.getPrayerUsed() > 0 ? Long.toString(recap.getPrayerUsed()) : null;
 			itemRows = items.getRows();
 			totalValue = items.getTotalValue();
 			duration = formatDuration(recap.getElapsedMillis());

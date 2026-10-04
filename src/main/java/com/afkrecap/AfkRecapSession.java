@@ -23,6 +23,9 @@ public final class AfkRecapSession
 	private final Map<Skill, Long> xpGained;
 	private final Set<Skill> relevantIdleSkills;
 	private final Map<Integer, Integer> itemGains;
+	private final Map<String, Integer> npcKills;
+	private final long prayerUsed;
+	private final long damageTaken;
 
 	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
 		long endGameTick, Instant endTimestamp, long elapsedMillis,
@@ -36,6 +39,35 @@ public final class AfkRecapSession
 		long endGameTick, Instant endTimestamp, long elapsedMillis,
 		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains)
 	{
+		this(trigger, startGameTick, startTimestamp, endGameTick, endTimestamp, elapsedMillis,
+			xpGained, relevantIdleSkills, itemGains, Collections.emptyMap(), 0);
+	}
+
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
+		long endGameTick, Instant endTimestamp, long elapsedMillis,
+		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
+		Map<String, Integer> npcKills, long prayerUsed)
+	{
+		this(trigger, startGameTick, startTimestamp, endGameTick, endTimestamp, elapsedMillis,
+			xpGained, relevantIdleSkills, itemGains, npcKills, prayerUsed, 0);
+	}
+
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
+		long endGameTick, Instant endTimestamp, long elapsedMillis,
+		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
+		Map<String, Integer> npcKills, long prayerUsed, long damageTaken)
+	{
+		this.damageTaken = Math.max(0, damageTaken);
+		Map<String, Integer> kills = new TreeMap<>();
+		npcKills.forEach((name, count) ->
+		{
+			if (name != null && !name.trim().isEmpty() && count > 0)
+			{
+				kills.put(name, count);
+			}
+		});
+		this.npcKills = Collections.unmodifiableMap(kills);
+		this.prayerUsed = Math.max(0, prayerUsed);
 		this.trigger = trigger;
 		this.startGameTick = startGameTick;
 		this.startTimestamp = startTimestamp;
@@ -68,7 +100,7 @@ public final class AfkRecapSession
 
 	public boolean hasGains()
 	{
-		return !xpGained.isEmpty() || !itemGains.isEmpty();
+		return !xpGained.isEmpty() || !itemGains.isEmpty() || !npcKills.isEmpty() || prayerUsed > 0 || damageTaken > 0;
 	}
 
 	public long getElapsedGameTicks()
