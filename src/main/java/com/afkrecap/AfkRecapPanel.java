@@ -86,6 +86,19 @@ public final class AfkRecapPanel extends PluginPanel
 			row.add(new JLabel(AfkRecapPanelPresentation.xp(gained)), BorderLayout.EAST);
 			xpRows.add(row);
 		});
+		if (!recap.getMissedRandomEvents().isEmpty())
+		{
+			xpRows.add(new JLabel("Missed random events"));
+			recap.getMissedRandomEvents().forEach((name, count) ->
+			{
+				JPanel row = new JPanel(new BorderLayout(6, 0));
+				row.setOpaque(false);
+				row.add(new JLabel(name), BorderLayout.CENTER);
+				row.add(new JLabel(count.toString()), BorderLayout.EAST);
+				xpRows.add(row);
+			});
+		}
+
 		if (!recap.getNpcKills().isEmpty())
 		{
 			xpRows.add(new JLabel("Kills"));

@@ -28,6 +28,11 @@ input; it does not send game inputs or automate gameplay.
   at least the configured GE value (100,000 gp by default), plus clue scrolls by
   default. Picking up a drop can intentionally show it in both Notable drops and
   Items gained. Drops alone do not qualify an idle candidate.
+- **Missed random events:** by default, record known random-event NPCs positively
+  identified as targeting you during the session, then disappearing without
+  interaction. Repeated misses aggregate by NPC name in the overlay and history.
+  A confirmed miss alone qualifies an idle candidate. Disable **Track missed random
+  events** to clear current event evidence and omit misses from that session.
 - **Combat metrics:** attributed NPC kill counts, cumulative Prayer points used,
   and cumulative damage taken by the local player. Restoration and healing do not
   reduce these totals. These metrics alone do not qualify an idle candidate.
@@ -58,6 +63,19 @@ baselines prevent synchronization gains or data carrying over between worlds.
   qualify. In-game confirmation is still required.
 - Sailing XP is tracked, but crewmate salvage item types and quantities are not.
   Ship cargo additions do not contribute to item totals.
+- Random-event ownership follows RuneLite 1.13.1 Random Events: a recognized NPC
+  targets the local player while the player is not interacting back. The exact
+  upstream private NPC list is reproduced with its license in `RandomEventTypes`.
+  Local-player interactions and unconsumed Talk-to/Dismiss NPC menu choices are
+  conservatively treated as handled; this does not prove completion or distinguish
+  it from dismissal. Cancelled interactions can therefore suppress a miss. Unknown
+  ownership, events already active before the session without a fresh targeting
+  signal, and NPCs outside the upstream list are omitted. Despawns are confirmed on
+  the next stable logged-in game tick; pending despawns at a session boundary are
+  omitted. Active events at logout/disconnect/hop are never assumed missed, and
+  evidence does not carry into the next session or world. RuneLite provides no
+  general expiration reason; its 150-tick random-event timeout is a notification
+  cooldown, not evidence of expiration. In-game confirmation is still required.
 - Shared or uncertain NPC kills may be conservatively undercounted when visible
   damage evidence is insufficient or includes another player's damage.
 - Ambiguous hidden-resource messages, unknown item types, cormorant catches, and

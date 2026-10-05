@@ -51,6 +51,13 @@ public final class AfkRecapOverlay extends OverlayPanel
 			panelComponent.getChildren().add(LineComponent.builder()
 				.left(row.getSkill()).right(row.getGained()).build());
 		}
+		if (!recap.getMissedRandomEvents().isEmpty())
+		{
+			panelComponent.getChildren().add(TitleComponent.builder().text("Missed random events").build());
+			recap.getMissedRandomEvents().forEach((name, count) -> panelComponent.getChildren().add(
+				LineComponent.builder().left(name).right(count.toString()).build()));
+		}
+
 		if (!recap.getNpcKills().isEmpty())
 		{
 			panelComponent.getChildren().add(TitleComponent.builder().text("Kills").build());

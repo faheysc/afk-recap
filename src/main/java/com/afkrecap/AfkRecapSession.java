@@ -26,6 +26,7 @@ public final class AfkRecapSession
 	private final Map<Integer, Integer> itemGains;
 	private final Map<Integer, Integer> notableDrops;
 	private final Map<String, Integer> npcKills;
+	private final Map<String, Integer> missedRandomEvents;
 	private final long prayerUsed;
 	private final long damageTaken;
 
@@ -78,6 +79,26 @@ public final class AfkRecapSession
 		Map<String, Integer> npcKills, long prayerUsed, long damageTaken, AfkSessionEndReason endReason,
 		Map<Integer, Integer> notableDrops)
 	{
+		this(trigger, startGameTick, startTimestamp, endGameTick, endTimestamp, elapsedMillis,
+			xpGained, relevantIdleSkills, itemGains, npcKills, prayerUsed, damageTaken, endReason,
+			notableDrops, Collections.emptyMap());
+	}
+
+	AfkRecapSession(AfkSessionTrigger trigger, long startGameTick, Instant startTimestamp,
+		long endGameTick, Instant endTimestamp, long elapsedMillis,
+		Map<Skill, Long> xpGained, Set<Skill> relevantIdleSkills, Map<Integer, Integer> itemGains,
+		Map<String, Integer> npcKills, long prayerUsed, long damageTaken, AfkSessionEndReason endReason,
+		Map<Integer, Integer> notableDrops, Map<String, Integer> missedRandomEvents)
+	{
+		Map<String, Integer> misses = new TreeMap<>();
+		missedRandomEvents.forEach((name, count) ->
+		{
+			if (name != null && !name.trim().isEmpty() && count != null && count > 0)
+			{
+				misses.put(name, count);
+			}
+		});
+		this.missedRandomEvents = Collections.unmodifiableMap(misses);
 		Map<Integer, Integer> drops = new TreeMap<>();
 		notableDrops.forEach((id, quantity) ->
 		{
@@ -131,7 +152,12 @@ public final class AfkRecapSession
 
 	public boolean hasGains()
 	{
-		return !notableDrops.isEmpty() || !xpGained.isEmpty() || !itemGains.isEmpty() || !npcKills.isEmpty() || prayerUsed > 0 || damageTaken > 0;
+		return !missedRandomEvents.isEmpty() || !notableDrops.isEmpty() || !xpGained.isEmpty() || !itemGains.isEmpty() || !npcKills.isEmpty() || prayerUsed > 0 || damageTaken > 0;
+	}
+
+	public boolean isIdleRelevant()
+	{
+		return !relevantIdleSkills.isEmpty() || !missedRandomEvents.isEmpty();
 	}
 
 	public long getElapsedGameTicks()

@@ -45,7 +45,7 @@ public final class AfkRecapController
 			return;
 		}
 		if (!recap.hasGains()
-			|| (recap.getTrigger() == AfkSessionTrigger.IDLE && recap.getRelevantIdleSkills().isEmpty()))
+			|| (recap.getTrigger() == AfkSessionTrigger.IDLE && !recap.isIdleRelevant()))
 		{
 			return;
 		}
@@ -89,6 +89,7 @@ public final class AfkRecapController
 		private final List<AfkRecapItemPresentation.ItemRow> notableDropRows;
 		private final String totalValue;
 		private final Map<String, Integer> npcKills;
+		private final Map<String, Integer> missedRandomEvents;
 		private final String prayerUsed;
 		private final String damageTaken;
 
@@ -96,6 +97,7 @@ public final class AfkRecapController
 		{
 			damageTaken = recap.getDamageTaken() > 0 ? Long.toString(recap.getDamageTaken()) : null;
 			npcKills = recap.getNpcKills();
+			missedRandomEvents = recap.getMissedRandomEvents();
 			prayerUsed = recap.getPrayerUsed() > 0 ? Long.toString(recap.getPrayerUsed()) : null;
 			itemRows = items.getRows();
 			notableDropRows = items.getNotableRows();

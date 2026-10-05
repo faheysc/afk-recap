@@ -118,6 +118,11 @@ final class AfkSessionManager
 		if (session != null)
 		{
 			session.inventory.gameTick();
+			configureRandomEvents(config.trackMissedRandomEvents());
+			if (session.trackRandomEvents)
+			{
+				session.randomEvents.gameTick();
+			}
 		}
 		gameTicks++;
 		inactiveTicks = Math.min(100, inactiveTicks + 1);
@@ -126,6 +131,7 @@ final class AfkSessionManager
 		{
 			log.debug("Idle threshold reached: {} inactive game ticks (~{} ms)", inactiveTicks, inactiveTicks * 600L);
 			start(AfkSessionTrigger.IDLE, IdleActivity.enabledSkills(config), IdleActivity.enabledActivities(config));
+			configureRandomEvents(config.trackMissedRandomEvents());
 		}
 	}
 
@@ -146,6 +152,7 @@ final class AfkSessionManager
 		else if (config.startOnFocusLoss() && session == null)
 		{
 			start(AfkSessionTrigger.FOCUS, EnumSet.noneOf(Skill.class), EnumSet.noneOf(IdleActivity.class));
+			configureRandomEvents(config.trackMissedRandomEvents());
 		}
 	}
 
@@ -232,6 +239,42 @@ final class AfkSessionManager
 		if (session != null)
 		{
 			session.kills.despawn(npc);
+		}
+	}
+
+	void configureRandomEvents(boolean enabled)
+	{
+		if (session != null)
+		{
+			session.trackRandomEvents = enabled;
+			if (!enabled)
+			{
+				session.randomEvents.clear();
+			}
+		}
+	}
+
+	void randomEventTargeted(Object npc, int id, String name, boolean targetsLocal, boolean localInteractingBack)
+	{
+		if (ready && session != null && session.trackRandomEvents)
+		{
+			session.randomEvents.targeted(npc, id, name, targetsLocal, localInteractingBack);
+		}
+	}
+
+	void randomEventHandled(Object npc)
+	{
+		if (ready && session != null && session.trackRandomEvents)
+		{
+			session.randomEvents.handled(npc);
+		}
+	}
+
+	void randomEventDespawned(Object npc)
+	{
+		if (ready && session != null && session.trackRandomEvents)
+		{
+			session.randomEvents.despawned(npc);
 		}
 	}
 
@@ -324,17 +367,17 @@ final class AfkSessionManager
 		long ticks = gameTicks - ended.startTick;
 		long elapsedMillis = (nanoTime.getAsLong() - ended.startNanos) / 1_000_000L;
 		String outcome = ended.trigger == AfkSessionTrigger.IDLE
-			? (ended.relevantSkills.isEmpty() ? "discarded" : "relevant") : "ended";
+			? (ended.relevantSkills.isEmpty() && ended.randomEvents.misses().isEmpty() ? "discarded" : "relevant") : "ended";
 		log.debug("Away session ended: trigger={}, reason={}, outcome={}, skills={}, elapsedGameTicks={}, elapsedMs={}",
 			ended.trigger, reason, outcome, ended.relevantSkills, ticks, elapsedMillis);
 		Map<Integer, Integer> itemGains = ended.inventory.gains();
 		if ((!ended.xpGained.isEmpty() || !itemGains.isEmpty() || !ended.kills.totals().isEmpty()
-			|| !ended.drops.totals().isEmpty() || ended.prayerUsed > 0 || ended.damageTaken > 0)
-			&& (ended.trigger == AfkSessionTrigger.FOCUS || !ended.relevantSkills.isEmpty()))
+			|| !ended.drops.totals().isEmpty() || !ended.randomEvents.misses().isEmpty() || ended.prayerUsed > 0 || ended.damageTaken > 0)
+			&& (ended.trigger == AfkSessionTrigger.FOCUS || !ended.relevantSkills.isEmpty() || !ended.randomEvents.misses().isEmpty()))
 		{
 			AfkRecapSession recap = new AfkRecapSession(ended.trigger, ended.startTick,
 				ended.startTimestamp, gameTicks, endTimestamp, elapsedMillis,
-				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken, endReason, ended.drops.totals());
+				ended.xpGained, ended.relevantSkills, itemGains, ended.kills.totals(), ended.prayerUsed, ended.damageTaken, endReason, ended.drops.totals(), ended.randomEvents.misses());
 			logRecap(recap);
 			// Hand off an immutable snapshot; no session history or permanent storage.
 			recapConsumer.accept(recap);
@@ -364,6 +407,13 @@ final class AfkSessionManager
 			recap.getItemGains().forEach((id, quantity) ->
 				message.append("\n- Item ").append(id).append(": ").append(quantity));
 		}
+		if (!recap.getMissedRandomEvents().isEmpty())
+		{
+			message.append("\nMissed random events:");
+			recap.getMissedRandomEvents().forEach((name, count) ->
+				message.append("\n- ").append(name).append(": ").append(count));
+		}
+
 		log.debug("{}", message);
 	}
 
@@ -377,6 +427,8 @@ final class AfkSessionManager
 		private final Set<Skill> enabledSkills;
 		private final Set<IdleActivity> enabledActivities;
 		private final ResourceAcquisitionTracker inventory;
+		private boolean trackRandomEvents;
+		private final MissedRandomEventTracker randomEvents = new MissedRandomEventTracker();
 		private final NpcKillTracker kills = new NpcKillTracker();
 		private final NotableDropTracker drops = new NotableDropTracker();
 		private long prayerUsed;

@@ -28,8 +28,10 @@ import net.runelite.api.events.ChatMessage;
 import net.runelite.api.events.MenuOptionClicked;
 import net.runelite.client.util.Text;
 import net.runelite.api.NPC;
+import net.runelite.api.MenuAction;
 import net.runelite.api.Hitsplat;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.InteractingChanged;
 import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.HitsplatApplied;
 import net.runelite.api.events.NpcDespawned;
@@ -203,6 +205,7 @@ public class AfkRecapPlugin extends Plugin
 				// Ignore callbacks belonging to a previous enable/disable cycle.
 				if (sessions == current && client.getGameState() == GameState.LOGGED_IN)
 				{
+					current.configureRandomEvents(config.trackMissedRandomEvents());
 					current.manualInput();
 				}
 			});
@@ -216,6 +219,7 @@ public class AfkRecapPlugin extends Plugin
 		AfkSessionManager current = sessions;
 		if (current != null && client.getGameState() == GameState.LOGGED_IN)
 		{
+			current.configureRandomEvents(config.trackMissedRandomEvents());
 			current.focusChanged(event.isFocused(), config);
 		}
 	}
@@ -295,12 +299,43 @@ public class AfkRecapPlugin extends Plugin
 	}
 
 	@Subscribe
+	public void onInteractingChanged(InteractingChanged event)
+	{
+		AfkSessionManager current = sessions;
+		if (current == null || !current.isReady() || current.trigger() == null
+			|| client.getGameState() != GameState.LOGGED_IN)
+		{
+			return;
+		}
+		current.configureRandomEvents(config.trackMissedRandomEvents());
+		if (!config.trackMissedRandomEvents() || client.getLocalPlayer() == null)
+		{
+			return;
+		}
+		if (event.getSource() == client.getLocalPlayer())
+		{
+			current.randomEventHandled(event.getTarget());
+		}
+		else if (event.getSource() instanceof NPC)
+		{
+			NPC npc = (NPC) event.getSource();
+			current.randomEventTargeted(npc, npc.getId(), npc.getName(),
+				event.getTarget() == client.getLocalPlayer(), client.getLocalPlayer().getInteracting() == npc);
+		}
+	}
+
+	@Subscribe
 	public void onNpcDespawned(NpcDespawned event)
 	{
 		AfkSessionManager current = sessions;
 		if (current != null && current.trigger() != null)
 		{
 			current.npcDespawned(event.getNpc());
+			current.configureRandomEvents(config.trackMissedRandomEvents());
+			if (client.getGameState() == GameState.LOGGED_IN)
+			{
+				current.randomEventDespawned(event.getNpc());
+			}
 		}
 	}
 
@@ -442,6 +477,13 @@ public class AfkRecapPlugin extends Plugin
 			return;
 		}
 		String option = Text.removeTags(event.getMenuOption()).toLowerCase(Locale.ROOT);
+		current.configureRandomEvents(config.trackMissedRandomEvents());
+		if (!event.isConsumed() && (option.equals("talk-to") || option.equals("dismiss"))
+			&& event.getMenuAction().getId() >= MenuAction.NPC_FIRST_OPTION.getId()
+			&& event.getMenuAction().getId() <= MenuAction.NPC_FIFTH_OPTION.getId())
+		{
+			current.randomEventHandled(event.getMenuEntry().getNpc());
+		}
 		Widget widget = event.getWidget();
 		Family container = widget == null ? null : ResourceAcquisitionMessages.container(widget.getItemId());
 		if (container == null)
@@ -526,6 +568,7 @@ public class AfkRecapPlugin extends Plugin
 		AfkSessionManager current = sessions;
 		if (current != null)
 		{
+			current.configureRandomEvents(config.trackMissedRandomEvents());
 			current.gameStateChanged(event.getGameState());
 			if (event.getGameState() == GameState.LOGGED_IN)
 			{
@@ -544,7 +587,17 @@ public class AfkRecapPlugin extends Plugin
 		}
 		if ("away-recap".equals(event.getGroup()))
 		{
-			if ("recentRecapLimit".equals(event.getKey()))
+			if ("trackMissedRandomEvents".equals(event.getKey()))
+			{
+				clientThread.invoke(() ->
+				{
+					if (sessions != null)
+					{
+						sessions.configureRandomEvents(config.trackMissedRandomEvents());
+					}
+				});
+			}
+			else if ("recentRecapLimit".equals(event.getKey()))
 			{
 				recapHistory.setLimit(config.recentRecapLimit());
 				refreshSidePanel();

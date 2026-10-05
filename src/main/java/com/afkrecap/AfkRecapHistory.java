@@ -16,7 +16,7 @@ public final class AfkRecapHistory
 	synchronized boolean add(AfkRecapSession recap)
 	{
 		if (!recap.hasGains()
-			|| (recap.getTrigger() == AfkSessionTrigger.IDLE && recap.getRelevantIdleSkills().isEmpty()))
+			|| (recap.getTrigger() == AfkSessionTrigger.IDLE && !recap.isIdleRelevant()))
 		{
 			return false;
 		}

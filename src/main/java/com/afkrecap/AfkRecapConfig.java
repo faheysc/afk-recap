@@ -118,4 +118,10 @@ public interface AfkRecapConfig extends Config
 		return true;
 	}
 
+	@ConfigItem(keyName = "trackMissedRandomEvents", name = "Track missed random events", description = "Record unhandled random events targeting you that disappear while away", position = 17)
+	default boolean trackMissedRandomEvents()
+	{
+		return true;
+	}
+
 }
