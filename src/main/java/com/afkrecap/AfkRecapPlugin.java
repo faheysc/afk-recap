@@ -237,7 +237,7 @@ public class AfkRecapPlugin extends Plugin
 				return;
 			}
 			current.gameTick(config);
-			if (client.getLocalPlayer() != null)
+			if (current.trigger() == AfkSessionTrigger.IDLE && client.getLocalPlayer() != null)
 			{
 				current.activityDetected(SailingActivitySignals.animation(client.getLocalPlayer().getAnimation()));
 			}
@@ -248,8 +248,8 @@ public class AfkRecapPlugin extends Plugin
 	public void onAnimationChanged(AnimationChanged event)
 	{
 		AfkSessionManager current = sessions;
-		if (current != null && current.isReady() && client.getGameState() == GameState.LOGGED_IN
-			&& event.getActor() != null && event.getActor() == client.getLocalPlayer())
+		if (current != null && current.trigger() == AfkSessionTrigger.IDLE && current.isReady()
+			&& client.getGameState() == GameState.LOGGED_IN && event.getActor() != null && event.getActor() == client.getLocalPlayer())
 		{
 			current.activityDetected(SailingActivitySignals.animation(event.getActor().getAnimation()));
 		}
@@ -319,8 +319,12 @@ public class AfkRecapPlugin extends Plugin
 		else if (event.getSource() instanceof NPC)
 		{
 			NPC npc = (NPC) event.getSource();
-			current.randomEventTargeted(npc, npc.getId(), npc.getName(),
-				event.getTarget() == client.getLocalPlayer(), client.getLocalPlayer().getInteracting() == npc);
+			// Ownership predicate adapted from RuneLite RandomEventPlugin; see META-INF/NOTICE.
+			if (event.getTarget() == client.getLocalPlayer() && RandomEventTypes.contains(npc.getId()))
+			{
+				current.randomEventTargeted(npc, npc.getId(), npc.getName(), true,
+					client.getLocalPlayer().getInteracting() == npc);
+			}
 		}
 	}
 
@@ -434,7 +438,10 @@ public class AfkRecapPlugin extends Plugin
 			return;
 		}
 		String message = Text.removeTags(event.getMessage());
-		current.activityDetected(SailingActivitySignals.message(message));
+		if (current.trigger() == AfkSessionTrigger.IDLE)
+		{
+			current.activityDetected(SailingActivitySignals.message(message));
+		}
 		if (event.getType() == ChatMessageType.GAMEMESSAGE)
 		{
 			switch (message)

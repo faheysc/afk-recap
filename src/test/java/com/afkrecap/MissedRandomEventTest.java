@@ -347,6 +347,31 @@ public class MissedRandomEventTest
 	}
 
 	@Test
+	public void resolvedRandomsLeaveNoStrongEvidenceOrPerTickHistoryScan()
+	{
+		MissedRandomEventTracker tracker = new MissedRandomEventTracker();
+		List<Object> npcs = new ArrayList<>();
+		for (int i = 0; i < 1000; i++)
+		{
+			Object npc = new Object();
+			npcs.add(npc); // Keep tombstones alive to exercise late duplicate signals.
+			tracker.targeted(npc, NpcID.MACRO_GENI, "Genie", true, false);
+			assertEquals(1, tracker.activeEventCount());
+			tracker.despawned(npc);
+			tracker.gameTick();
+			assertEquals(0, tracker.activeEventCount());
+		}
+		for (Object npc : npcs)
+		{
+			tracker.targeted(npc, NpcID.MACRO_GENI, "Genie", true, false);
+			tracker.despawned(npc);
+		}
+		tracker.gameTick();
+		assertEquals(0, tracker.activeEventCount());
+		assertEquals(Collections.singletonMap("Genie", 1000), tracker.misses());
+	}
+
+	@Test
 	public void trackingIsEnabledByDefault()
 	{
 		assertTrue(config.trackMissedRandomEvents());

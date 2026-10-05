@@ -39,7 +39,8 @@ input; it does not send game inputs or automate gameplay.
 - **Recap presentation:** a transient overlay and an optional recent-recap side
   panel with Clear History. History defaults to 20 entries, is capped at 100, and
   is not saved across client restarts. Items show quantities and approximate values
-  where available.
+  where available. Large overlays show at most 24 rows and a history hint;
+  the side panel retains the complete recap.
 
 Logout, disconnects, and world hops finish qualifying sessions and immediately
 save them in recent history without opening an overlay on the login screen.
@@ -48,6 +49,9 @@ baselines prevent synchronization gains or data carrying over between worlds.
 
 ## Known limitations
 
+- Ordinary `LOADING` pauses collection and preserves the session. Collection
+  resumes with fresh XP/inventory/Prayer baselines; changes during loading are
+  omitted. Unconfirmed scene-specific NPC/random-event evidence is cleared.
 - Fish-barrel and fish-sack-barrel behavior is covered by automated tests but has
   not been manually verified. Hidden log-basket gains have been manually verified.
 - Sailing IDLE relevance uses the local player's salvage-hook gathering animations
@@ -92,4 +96,6 @@ baselines prevent synchronization gains or data carrying over between worlds.
   into inventory can appear as gains. Delayed events or overlapping transfers and
   gathering may not reconcile accurately.
 
-Licensed under the [BSD 2-Clause License](LICENSE).
+Licensed under the [BSD 2-Clause License](LICENSE). Adapted RuneLite logic retains
+its upstream notices in [META-INF/NOTICE](src/main/resources/META-INF/NOTICE),
+which is also included in the plugin JAR.

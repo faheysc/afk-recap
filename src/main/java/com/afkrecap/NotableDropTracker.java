@@ -60,6 +60,11 @@ final class NotableDropTracker
 		}
 	}
 
+	void clearEvidence()
+	{
+		quantities.clear();
+	}
+
 	Map<Integer, Integer> totals()
 	{
 		return totals;

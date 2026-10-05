@@ -48,9 +48,9 @@ enum IdleActivity
 		return activities;
 	}
 
-	Set<Skill> relevantSkills()
+	void addRelevantSkills(Set<Skill> relevantSkills)
 	{
-		return EnumSet.copyOf(skills);
+		relevantSkills.addAll(skills);
 	}
 
 	static Set<Skill> enabledSkills(AfkRecapConfig config)

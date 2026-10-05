@@ -3,7 +3,7 @@ package com.afkrecap;
 import java.util.regex.Pattern;
 import net.runelite.api.gameval.AnimationID;
 
-// Signals verified against RuneLite 1.13.1 IdleNotifierPlugin and LootTrackerPlugin.
+// Signals adapted from RuneLite 1.13.1 IdleNotifierPlugin and LootTrackerPlugin; see META-INF/NOTICE.
 final class SailingActivitySignals
 {
 	private static final Pattern SORTED = Pattern.compile("You sort through the\\s+\\S+\\s+salvage.*");

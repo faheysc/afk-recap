@@ -7,6 +7,7 @@ import java.awt.image.BufferedImage;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.TreeMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.JLabel;
@@ -97,4 +98,24 @@ public class MissedRandomEventPresentationTest
 			new AfkRecapItemPresentation(id -> null)), labels));
 		assertFalse(labels.contains("Missed random events"));
 	}
+	@Test
+	public void largeOverlayIsBoundedWithoutTruncatingHistoryData()
+	{
+		Map<String, Integer> misses = new TreeMap<>();
+		for (int i = 0; i < 100; i++) { misses.put("Event " + i, 1); }
+		AfkRecapSession recap = recap(misses);
+		AfkRecapController controller = new AfkRecapController(() -> 0L);
+		controller.show(recap, true, 10);
+		AfkRecapOverlay overlay = new AfkRecapOverlay(new AfkRecapPlugin(), new AfkRecapConfig() {}, controller);
+		overlay.setClearChildren(false);
+		Graphics2D graphics = new BufferedImage(400, 600, BufferedImage.TYPE_INT_ARGB).createGraphics();
+		try { assertNotNull(overlay.render(graphics)); }
+		finally { graphics.dispose(); }
+		assertEquals(AfkRecapOverlay.MAX_ROWS, overlay.getPanelComponent().getChildren().size());
+		assertEquals(100, recap.getMissedRandomEvents().size());
+		AfkRecapHistory history = new AfkRecapHistory();
+		assertTrue(history.add(recap));
+		assertEquals(100, history.snapshot().get(0).getMissedRandomEvents().size());
+	}
+
 }

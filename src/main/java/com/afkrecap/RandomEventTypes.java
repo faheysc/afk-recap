@@ -28,7 +28,7 @@ package com.afkrecap;
 import java.util.Set;
 import net.runelite.api.gameval.NpcID;
 
-// Exact RandomEventPlugin NPC list from the installed RuneLite 1.13.1 source.
+// Exact RandomEventPlugin NPC list from the installed RuneLite 1.13.1 source; see META-INF/NOTICE.
 // The upstream list is private and cannot be accessed without forbidden reflection.
 final class RandomEventTypes
 {

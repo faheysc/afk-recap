@@ -40,6 +40,11 @@ final class NpcKillTracker
 		evidence.remove(npc);
 	}
 
+	void clearEvidence()
+	{
+		evidence.clear();
+	}
+
 	Map<String, Integer> totals()
 	{
 		return totals;

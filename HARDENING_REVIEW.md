@@ -1,5 +1,9 @@
 # AFK Recap hardening review
 
+Historical initial-release review. Its event descriptions and test counts describe
+the earlier checkpoint, not the current update candidate. See
+[RELEASE_CANDIDATE_AUDIT.md](RELEASE_CANDIDATE_AUDIT.md) for the update audit.
+
 Review of the committed checkpoint and low-risk changes, 2026-10-04.
 Packaging/readme readiness notes were updated during initial submission preparation.
 This is a source/API review with automated tests, not a gameplay profiler or a

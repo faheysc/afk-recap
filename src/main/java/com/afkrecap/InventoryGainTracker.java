@@ -17,6 +17,11 @@ final class InventoryGainTracker
 		previous = baseline == null ? null : new HashMap<>(baseline);
 	}
 
+	void baseline(Map<Integer, Integer> snapshot)
+	{
+		previous = snapshot == null ? null : new HashMap<>(snapshot);
+	}
+
 	void update(Map<Integer, Integer> current)
 	{
 		update(current, id -> true);

@@ -15,7 +15,7 @@ final class ResourceAcquisitionMessages
 	enum Family { FISH, LOG }
 
 	private static final Pattern CATCH = Pattern.compile("^You catch (?:a|an|some)(?: raw)? ([A-Za-z ]+)[.!]$");
-	// Mirror RuneLite 1.13.1 WoodcuttingPlugin's acquisition pattern; capture the item name.
+	// Adapt RuneLite 1.13.1 WoodcuttingPlugin's acquisition pattern; see META-INF/NOTICE.
 	private static final Pattern CHOP = Pattern.compile("^You get (?:some|an)([\\w ]+(?:logs?|mushrooms))\\.$");
 	private static final Map<String, Integer> FISH = fish();
 	private static final Map<String, Integer> LOGS = logs();

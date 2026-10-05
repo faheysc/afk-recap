@@ -2,20 +2,24 @@ package com.afkrecap;
 
 import java.util.IdentityHashMap;
 import java.util.Map;
+import java.util.Iterator;
+import java.util.WeakHashMap;
 import java.util.TreeMap;
 
 // Client-thread, session-scoped evidence. NPC identity avoids index reuse and duplicate signals.
 final class MissedRandomEventTracker
 {
 	private final Map<Object, Event> events = new IdentityHashMap<>();
+	// Resolved NPCs are tombstones only; values never retain NPCs. RuneLite NPCs use object equality.
+	private final Map<Object, Boolean> resolved = new WeakHashMap<>();
 	private final Map<String, Integer> misses = new TreeMap<>();
 
 	void targeted(Object npc, int id, String name, boolean targetsLocal, boolean localInteractingBack)
 	{
 		if (npc != null && targetsLocal && !localInteractingBack && RandomEventTypes.contains(id)
-			&& name != null && !name.trim().isEmpty())
+			&& name != null && !name.trim().isEmpty() && !resolved.containsKey(npc) && !events.containsKey(npc))
 		{
-			events.putIfAbsent(npc, new Event(name));
+			events.put(npc, new Event(name));
 		}
 	}
 
@@ -39,17 +43,26 @@ final class MissedRandomEventTracker
 
 	void gameTick()
 	{
-		for (Event event : events.values())
+		Iterator<Map.Entry<Object, Event>> iterator = events.entrySet().iterator();
+		while (iterator.hasNext())
 		{
-			if (event.despawned && !event.resolved)
+			Map.Entry<Object, Event> entry = iterator.next();
+			Event event = entry.getValue();
+			if (event.despawned)
 			{
-				event.resolved = true;
+				resolved.put(entry.getKey(), Boolean.TRUE);
+				iterator.remove();
 				if (!event.handled)
 				{
-					misses.merge(event.name, 1, Integer::sum);
+					misses.merge(event.name, 1, InventoryGainTracker::addQuantities);
 				}
 			}
 		}
+	}
+
+	int activeEventCount()
+	{
+		return events.size();
 	}
 
 	Map<String, Integer> misses()
@@ -57,9 +70,15 @@ final class MissedRandomEventTracker
 		return misses;
 	}
 
-	void clear()
+	void clearEvidence()
 	{
 		events.clear();
+		resolved.clear();
+	}
+
+	void clear()
+	{
+		clearEvidence();
 		misses.clear();
 	}
 
@@ -68,7 +87,6 @@ final class MissedRandomEventTracker
 		private final String name;
 		private boolean handled;
 		private boolean despawned;
-		private boolean resolved;
 
 		private Event(String name)
 		{

@@ -28,6 +28,7 @@ final class AfkSessionManager
 	private Session session;
 	private Integer prayerPoints;
 	private boolean ready = true;
+	private boolean loading;
 
 	AfkSessionManager()
 	{
@@ -58,6 +59,7 @@ final class AfkSessionManager
 	void suspend()
 	{
 		ready = false;
+		loading = false;
 		session = null;
 		inactiveTicks = 0;
 		experience.clear();
@@ -66,6 +68,22 @@ final class AfkSessionManager
 
 	void gameStateChanged(GameState state)
 	{
+		if (state == GameState.LOADING || (state == GameState.LOGGED_IN && loading))
+		{
+			// A scene load pauses collection, preserving the candidate and its inactivity period.
+			ready = false;
+			loading = true;
+			experience.clear();
+			prayerPoints = null;
+			if (session != null)
+			{
+				session.inventory.rebaseline(null);
+				session.kills.clearEvidence();
+				session.drops.clearEvidence();
+				session.randomEvents.clearEvidence();
+			}
+			return;
+		}
 		try
 		{
 			AfkSessionEndReason reason = AfkSessionEndReason.forGameState(state);
@@ -84,7 +102,18 @@ final class AfkSessionManager
 
 	void loggedIn(Map<Skill, Integer> xp, int prayer)
 	{
-		suspend();
+		if (loading)
+		{
+			if (session != null)
+			{
+				session.inventory.rebaseline(inventorySnapshot.get());
+			}
+			loading = false;
+		}
+		else
+		{
+			suspend();
+		}
 		baseline(xp);
 		baselinePrayer(prayer);
 		ready = true;
@@ -97,7 +126,7 @@ final class AfkSessionManager
 
 	void playerHitsplat(Hitsplat hit)
 	{
-		if (session != null && PlayerDamage.isDamage(hit))
+		if (ready && session != null && PlayerDamage.isDamage(hit))
 		{
 			session.damageTaken += hit.getAmount();
 		}
@@ -196,7 +225,7 @@ final class AfkSessionManager
 		if (ready && trigger() == AfkSessionTrigger.IDLE && activity != null
 			&& session.enabledActivities.contains(activity))
 		{
-			session.relevantSkills.addAll(activity.relevantSkills());
+			activity.addRelevantSkills(session.relevantSkills);
 		}
 	}
 
@@ -220,7 +249,7 @@ final class AfkSessionManager
 
 	void npcDamage(Object npc, int amount, boolean mine, boolean others)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.kills.damage(npc, amount, mine, others);
 		}
@@ -228,7 +257,7 @@ final class AfkSessionManager
 
 	void npcDeath(Object npc, String name)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.kills.death(npc, name);
 		}
@@ -236,7 +265,7 @@ final class AfkSessionManager
 
 	void npcDespawned(Object npc)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.kills.despawn(npc);
 		}
@@ -280,7 +309,7 @@ final class AfkSessionManager
 
 	void groundSpawn(Object pile, int id, int quantity, int ownership, long price, boolean clue, AfkRecapConfig config)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.drops.spawn(pile, id, quantity, ownership, price, clue, config);
 		}
@@ -289,7 +318,7 @@ final class AfkSessionManager
 	void groundQuantityChanged(Object pile, int id, int oldQuantity, int newQuantity, int ownership,
 		long price, boolean clue, AfkRecapConfig config)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.drops.quantityChanged(pile, id, oldQuantity, newQuantity, ownership, price, clue, config);
 		}
@@ -297,7 +326,7 @@ final class AfkSessionManager
 
 	void groundDespawn(Object pile)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.drops.despawn(pile);
 		}
@@ -305,7 +334,7 @@ final class AfkSessionManager
 
 	void inventoryChanged(Map<Integer, Integer> inventory)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.inventory.inventoryChanged(inventory);
 		}
@@ -313,7 +342,7 @@ final class AfkSessionManager
 
 	void acquisitionMessage(String message, boolean fishStorage, boolean logStorage)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.inventory.message(message, fishStorage, logStorage);
 		}
@@ -321,7 +350,7 @@ final class AfkSessionManager
 
 	void resourceTransfer(ResourceAcquisitionMessages.Family family)
 	{
-		if (session != null)
+		if (ready && session != null)
 		{
 			session.inventory.transfer(family);
 		}

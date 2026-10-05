@@ -94,6 +94,14 @@ final class ResourceAcquisitionTracker
 		clearContext();
 	}
 
+	// Commit already observed acquisitions before replacing synchronization baselines.
+	void rebaseline(Map<Integer, Integer> snapshot)
+	{
+		gains();
+		inventory.baseline(snapshot);
+		transferUntil.clear();
+	}
+
 	Map<Integer, Integer> gains()
 	{
 		reconcile();

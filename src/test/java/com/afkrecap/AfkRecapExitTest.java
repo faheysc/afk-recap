@@ -180,4 +180,16 @@ public class AfkRecapExitTest
 		});
 		assertFalse(manager.isReady());
 	}
+	@Test public void loadingBeforeExitPreservesQualifyingData()
+	{
+		// Loading must leave the qualifying session available to terminal finalization.
+		focus(); manager.statChanged(Skill.ATTACK, 1010); items(10);
+		manager.gameStateChanged(GameState.LOADING);
+		manager.gameStateChanged(GameState.LOGIN_SCREEN);
+		assertEquals(1, recaps.size());
+		assertEquals(Map.of(Skill.ATTACK, 10L), recaps.get(0).getXpGained());
+		assertNull(manager.trigger());
+		assertFalse(manager.isReady());
+	}
+
 }

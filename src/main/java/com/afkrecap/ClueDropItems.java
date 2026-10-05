@@ -2,7 +2,7 @@ package com.afkrecap;
 
 import net.runelite.api.gameval.ItemID;
 
-/** RuneLite's clue-scroll item parameter covers step variants; never use name/ID ranges. */
+/** RuneLite ClueScrollPlugin's parameter identification covers step variants; see META-INF/NOTICE. */
 final class ClueDropItems
 {
 	private ClueDropItems()
