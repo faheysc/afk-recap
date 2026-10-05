@@ -154,11 +154,18 @@ public class AfkRecapInventoryTest
 	}
 
 	@Test
-	public void sailingXpCanQualifyDelayedCandidateAndRetainsEarlierItems()
+	public void salvagingSignalQualifiesDelayedCandidateAndRetainsEarlierXpAndItems()
 	{
-		assertTrue(config.idleSailing());
-		assertTrue(IdleActivity.enabledSkills(config).contains(Skill.SAILING));
-		assertDelayedSkillRelevance(Skill.SAILING);
+		assertTrue(config.idleSailingSalvaging());
+		assertFalse(IdleActivity.enabledSkills(config).contains(Skill.SAILING));
+		ticks(10, config);
+		gainItem(12);
+		manager.statChanged(Skill.SAILING, 1050);
+		assertTrue(manager.relevantSkills().isEmpty());
+		manager.activityDetected(IdleActivity.SAILING_SALVAGING);
+		manager.manualInput();
+		assertEquals(Long.valueOf(50), recaps.get(0).getXpGained().get(Skill.SAILING));
+		assertEquals(Integer.valueOf(12), recaps.get(0).getItemGains().get(ItemID.YEW_LOGS));
 	}
 
 	@Test
@@ -174,7 +181,7 @@ public class AfkRecapInventoryTest
 	{
 		AfkRecapConfig disabled = new AfkRecapConfig()
 		{
-			@Override public boolean idleSailing() { return false; }
+			@Override public boolean idleSailingSalvaging() { return false; }
 		};
 		assertFalse(IdleActivity.enabledSkills(disabled).contains(Skill.SAILING));
 		ticks(10, disabled);

@@ -30,6 +30,7 @@ import net.runelite.client.util.Text;
 import net.runelite.api.NPC;
 import net.runelite.api.Hitsplat;
 import net.runelite.api.events.ActorDeath;
+import net.runelite.api.events.AnimationChanged;
 import net.runelite.api.events.HitsplatApplied;
 import net.runelite.api.events.NpcDespawned;
 import net.runelite.api.GameState;
@@ -232,6 +233,21 @@ public class AfkRecapPlugin extends Plugin
 				return;
 			}
 			current.gameTick(config);
+			if (client.getLocalPlayer() != null)
+			{
+				current.activityDetected(SailingActivitySignals.animation(client.getLocalPlayer().getAnimation()));
+			}
+		}
+	}
+
+	@Subscribe
+	public void onAnimationChanged(AnimationChanged event)
+	{
+		AfkSessionManager current = sessions;
+		if (current != null && current.isReady() && client.getGameState() == GameState.LOGGED_IN
+			&& event.getActor() != null && event.getActor() == client.getLocalPlayer())
+		{
+			current.activityDetected(SailingActivitySignals.animation(event.getActor().getAnimation()));
 		}
 	}
 
@@ -383,6 +399,7 @@ public class AfkRecapPlugin extends Plugin
 			return;
 		}
 		String message = Text.removeTags(event.getMessage());
+		current.activityDetected(SailingActivitySignals.message(message));
 		if (event.getType() == ChatMessageType.GAMEMESSAGE)
 		{
 			switch (message)

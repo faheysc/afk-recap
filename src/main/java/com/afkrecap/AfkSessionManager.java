@@ -125,7 +125,7 @@ final class AfkSessionManager
 		if (session == null && config.startOnIdle() && inactiveTicks >= threshold)
 		{
 			log.debug("Idle threshold reached: {} inactive game ticks (~{} ms)", inactiveTicks, inactiveTicks * 600L);
-			start(AfkSessionTrigger.IDLE, IdleActivity.enabledSkills(config));
+			start(AfkSessionTrigger.IDLE, IdleActivity.enabledSkills(config), IdleActivity.enabledActivities(config));
 		}
 	}
 
@@ -145,7 +145,7 @@ final class AfkSessionManager
 		}
 		else if (config.startOnFocusLoss() && session == null)
 		{
-			start(AfkSessionTrigger.FOCUS, EnumSet.noneOf(Skill.class));
+			start(AfkSessionTrigger.FOCUS, EnumSet.noneOf(Skill.class), EnumSet.noneOf(IdleActivity.class));
 		}
 	}
 
@@ -181,6 +181,15 @@ final class AfkSessionManager
 			&& session.relevantSkills.add(skill))
 		{
 			log.debug("IDLE session enabled skill activity detected: {} (+{} XP)", skill, gained);
+		}
+	}
+
+	void activityDetected(IdleActivity activity)
+	{
+		if (ready && trigger() == AfkSessionTrigger.IDLE && activity != null
+			&& session.enabledActivities.contains(activity))
+		{
+			session.relevantSkills.addAll(activity.relevantSkills());
 		}
 	}
 
@@ -296,9 +305,9 @@ final class AfkSessionManager
 		return session == null ? EnumSet.noneOf(Skill.class) : EnumSet.copyOf(session.relevantSkills);
 	}
 
-	private void start(AfkSessionTrigger trigger, Set<Skill> enabledSkills)
+	private void start(AfkSessionTrigger trigger, Set<Skill> enabledSkills, Set<IdleActivity> enabledActivities)
 	{
-		session = new Session(trigger, gameTicks, nanoTime.getAsLong(), timestamp.get(), enabledSkills, inventorySnapshot.get());
+		session = new Session(trigger, gameTicks, nanoTime.getAsLong(), timestamp.get(), enabledSkills, enabledActivities, inventorySnapshot.get());
 		log.debug("Away session started: trigger={}, gameTick={}, enabledSkills={}", trigger, gameTicks, enabledSkills);
 	}
 
@@ -366,6 +375,7 @@ final class AfkSessionManager
 		private final Instant startTimestamp;
 		private final Map<Skill, Long> xpGained = new EnumMap<>(Skill.class);
 		private final Set<Skill> enabledSkills;
+		private final Set<IdleActivity> enabledActivities;
 		private final ResourceAcquisitionTracker inventory;
 		private final NpcKillTracker kills = new NpcKillTracker();
 		private final NotableDropTracker drops = new NotableDropTracker();
@@ -374,7 +384,7 @@ final class AfkSessionManager
 		private final EnumSet<Skill> relevantSkills = EnumSet.noneOf(Skill.class);
 
 		private Session(AfkSessionTrigger trigger, long startTick, long startNanos,
-			Instant startTimestamp, Set<Skill> enabledSkills, Map<Integer, Integer> inventoryBaseline)
+			Instant startTimestamp, Set<Skill> enabledSkills, Set<IdleActivity> enabledActivities, Map<Integer, Integer> inventoryBaseline)
 		{
 			this.trigger = trigger;
 			this.startTick = startTick;
@@ -383,6 +393,8 @@ final class AfkSessionManager
 			this.inventory = new ResourceAcquisitionTracker(inventoryBaseline);
 			this.enabledSkills = EnumSet.noneOf(Skill.class);
 			this.enabledSkills.addAll(enabledSkills);
+			this.enabledActivities = EnumSet.noneOf(IdleActivity.class);
+			this.enabledActivities.addAll(enabledActivities);
 		}
 	}
 }

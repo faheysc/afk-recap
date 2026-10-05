@@ -10,10 +10,13 @@ input; it does not send game inputs or automate gameplay.
 - **Configurable idle sessions:** start after the configured number of game ticks
   without a mouse press or key press and finish on the next press. Mouse movement
   does not reset inactivity.
-- **Independent activity toggles:** Fishing, Mining, Woodcutting, Sailing, Combat,
-  and Slayer XP can qualify an idle candidate. All are enabled by default for new
-  installations. Combat uses Attack, Strength, Defence, Ranged, Magic, or Hitpoints
-  XP; Slayer uses only Slayer XP.
+- **Independent activity toggles:** Fishing, Mining, Woodcutting, Combat,
+  and Slayer XP can qualify an idle candidate. Sailing Salvaging and Sailing Sorting
+  use activity signals instead of generic Sailing XP. All default to enabled except
+  Sorting. Combat uses Attack, Strength, Defence, Ranged, Magic, or Hitpoints XP;
+  Slayer uses only Slayer XP. Existing Sailing preferences carry over to Salvaging
+  through the unchanged `idleSailing` key; the new `idleSailingSorting` key defaults
+  to false, including for existing users.
 - **XP and item/resource gains:** collect gains throughout the candidate, including
   before an enabled activity makes it relevant. Activity toggles only affect idle
   relevance; they do not filter collected data or affect focus sessions.
@@ -42,6 +45,17 @@ baselines prevent synchronization gains or data carrying over between worlds.
 
 - Fish-barrel and fish-sack-barrel behavior is covered by automated tests but has
   not been manually verified. Hidden log-basket gains have been manually verified.
+- Sailing IDLE relevance uses the local player's salvage-hook gathering animations
+  (`SAILING_HUMAN_SALVAGE_HOOK_KANDARIN_{1X3,2X5,3X8}_IDLE01` and
+  `SAILING_HUMAN_SALVAGE_HOOK_KANDARIN_1X3_SALVAGING01`). Sorting uses
+  `SAILING_HUMAN_SALVAGE_HOOK_KANDARIN_1X3_INTERACT01` or the RuneLite Loot
+  Tracker message pattern `You sort through the\s+\S+\s+salvage.*` in game, spam,
+  or message-box chat. Animations are observed on changes and each game tick so an
+  activity already underway when the candidate starts can qualify. These signals
+  were inspected in the installed RuneLite 1.13.1 API and Idle Notifier/Loot Tracker
+  source. Crew-only gathering without a recognized local animation is not inferred
+  from XP or cargo changes; setup/reset animations and other Sailing XP do not
+  qualify. In-game confirmation is still required.
 - Sailing XP is tracked, but crewmate salvage item types and quantities are not.
   Ship cargo additions do not contribute to item totals.
 - Shared or uncertain NPC kills may be conservatively undercounted when visible

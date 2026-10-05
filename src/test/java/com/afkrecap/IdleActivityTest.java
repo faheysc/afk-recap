@@ -22,7 +22,7 @@ public class IdleActivityTest
 		@Override public boolean idleFishing() { return false; }
 		@Override public boolean idleMining() { return false; }
 		@Override public boolean idleWoodcutting() { return false; }
-		@Override public boolean idleSailing() { return false; }
+		@Override public boolean idleSailingSalvaging() { return false; }
 		@Override public boolean idleSlayer() { return false; }
 	};
 
@@ -68,7 +68,7 @@ public class IdleActivityTest
 		{
 			@Override public boolean idleCombat() { return false; }
 		};
-		for (Skill skill : EnumSet.of(Skill.FISHING, Skill.MINING, Skill.WOODCUTTING, Skill.SAILING))
+		for (Skill skill : EnumSet.of(Skill.FISHING, Skill.MINING, Skill.WOODCUTTING))
 		{
 			AfkSessionManager manager = new AfkSessionManager();
 			manager.baseline(Collections.singletonMap(skill, 1000));
